@@ -89,6 +89,7 @@ public class OpenCLManager
 {
 
 	private static final long WORK_ITEMS_PER_WORK_GROUP = 6;
+	private static final int CONTEXT_PROPERTY_USE_CGL_APPLE = 268435456;
 	private static final String GL_SHARING_PLATFORM_EXT = "cl_khr_gl_sharing";
 	private static final String MACOS_GL_SHARING_PLATFORM_EXT = "cl_APPLE_gl_sharing";
 
@@ -321,7 +322,7 @@ public class OpenCLManager
 		}
 		else if (glContext instanceof MacOSXCGLContext)
 		{
-			contextProps.addProperty(CL_CGL_SHAREGROUP_KHR, glContextHandle);
+			contextProps.addProperty(CONTEXT_PROPERTY_USE_CGL_APPLE, glContextHandle);
 		}
 		else if (glContext instanceof EGLContext)
 		{
