@@ -90,6 +90,7 @@ public class OpenCLManager
 
 	private static final long WORK_ITEMS_PER_WORK_GROUP = 6;
 	private static final String GL_SHARING_PLATFORM_EXT = "cl_khr_gl_sharing";
+	private static final String MACOS_GL_SHARING_PLATFORM_EXT = "cl_APPLE_gl_sharing";
 
 	private static final Template BASE_TEMPLATE =
 		new Template().addInclude(OpenCLManager.class);
@@ -257,7 +258,7 @@ public class OpenCLManager
 			logPlatformInfo(platform, CL_PLATFORM_NAME);
 			logPlatformInfo(platform, CL_PLATFORM_VENDOR);
 			String[] extensions = logPlatformInfo(platform, CL_PLATFORM_EXTENSIONS).split(" ");
-			if (Arrays.stream(extensions).noneMatch(s -> s.equals(GL_SHARING_PLATFORM_EXT)))
+			if (Arrays.stream(extensions).noneMatch(s -> s.equals(GL_SHARING_PLATFORM_EXT) || s.equals(MACOS_GL_SHARING_PLATFORM_EXT)))
 				throw new OpenCLException("Platform does not support OpenGL buffer sharing");
 		}
 
@@ -296,6 +297,7 @@ public class OpenCLManager
 
 		// pull gl context
 		GLContext glContext = gl.getContext();
+		log.debug("Got GLContext of type {}", glContext.getClass().getSimpleName());
 		if (!glContext.isCurrent())
 			throw new OpenCLException("Can't create OpenCL context from inactive GL Context");
 
@@ -328,6 +330,7 @@ public class OpenCLManager
 			contextProps.addProperty(CL_EGL_DISPLAY_KHR, displayHandle);
 		}
 
+		log.debug("Creating context with props: {}", contextProps);
 		context = clCreateContext(contextProps, 1, new cl_device_id[]{device}, null, null, err);
 		checkErr("Could not create compute context");
 		log.debug("Created compute context {}", context);
