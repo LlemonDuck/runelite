@@ -28,31 +28,31 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.IntBuffer;
 
-class GpuIntBuffer
+public class GpuIntBuffer
 {
 	private IntBuffer buffer = allocateDirect(65536);
 
-	void put(int x, int y, int z)
+	public void put(int x, int y, int z)
 	{
 		buffer.put(x).put(y).put(z);
 	}
 
-	void put(int x, int y, int z, int c)
+	public void put(int x, int y, int z, int c)
 	{
 		buffer.put(x).put(y).put(z).put(c);
 	}
 
-	void flip()
+	public void flip()
 	{
 		buffer.flip();
 	}
 
-	void clear()
+	public void clear()
 	{
 		buffer.clear();
 	}
 
-	void ensureCapacity(int size)
+	public void ensureCapacity(int size)
 	{
 		int capacity = buffer.capacity();
 		final int position = buffer.position();
@@ -71,12 +71,12 @@ class GpuIntBuffer
 		}
 	}
 
-	IntBuffer getBuffer()
+	public IntBuffer getBuffer()
 	{
 		return buffer;
 	}
 
-	static IntBuffer allocateDirect(int size)
+	public static IntBuffer allocateDirect(int size)
 	{
 		return ByteBuffer.allocateDirect(size * Integer.BYTES)
 			.order(ByteOrder.nativeOrder())

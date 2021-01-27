@@ -90,6 +90,8 @@ import static net.runelite.client.plugins.gpu.GLUtil.glGenVertexArrays;
 import static net.runelite.client.plugins.gpu.GLUtil.glGetInteger;
 import net.runelite.client.plugins.gpu.config.AntiAliasingMode;
 import net.runelite.client.plugins.gpu.config.UIScalingMode;
+import net.runelite.client.plugins.gpu.opencl.OpenCLException;
+import net.runelite.client.plugins.gpu.opencl.OpenCLManager;
 import net.runelite.client.plugins.gpu.template.Template;
 import net.runelite.client.ui.DrawManager;
 import net.runelite.client.util.OSType;
@@ -116,6 +118,9 @@ public class GpuPlugin extends Plugin implements DrawCallbacks
 	private Client client;
 
 	@Inject
+	private OpenCLManager openCLManager;
+
+	@Inject
 	private ClientThread clientThread;
 
 	@Inject
@@ -134,6 +139,7 @@ public class GpuPlugin extends Plugin implements DrawCallbacks
 	private PluginManager pluginManager;
 
 	private boolean useComputeShaders;
+	private boolean useCL;
 
 	private Canvas canvas;
 	private JAWTWindow jawtWindow;
@@ -292,6 +298,7 @@ public class GpuPlugin extends Plugin implements DrawCallbacks
 
 				// OSX supports up to OpenGL 4.1, however 4.3 is required for compute shaders
 				useComputeShaders = config.useComputeShaders() && OSType.getOSType() != OSType.MacOS;
+				useCL = config.useCL();
 
 				canvas.setIgnoreRepaint(true);
 
@@ -433,6 +440,7 @@ public class GpuPlugin extends Plugin implements DrawCallbacks
 
 			invokeOnMainThread(() ->
 			{
+				openCLManager.cleanup();
 				if (gl != null)
 				{
 					if (textureArrayId != -1)
@@ -524,6 +532,18 @@ public class GpuPlugin extends Plugin implements DrawCallbacks
 			glComputeProgram = COMPUTE_PROGRAM.compile(gl, template);
 			glSmallComputeProgram = SMALL_COMPUTE_PROGRAM.compile(gl, template);
 			glUnorderedComputeProgram = UNORDERED_COMPUTE_PROGRAM.compile(gl, template);
+		}
+		else if (useCL)
+		{
+			try
+			{
+				openCLManager.init(gl);
+			}
+			catch (OpenCLException e)
+			{
+				useCL = false;
+				e.printStackTrace();
+			}
 		}
 
 		initUniforms();
@@ -813,7 +833,7 @@ public class GpuPlugin extends Plugin implements DrawCallbacks
 
 	private void postDraw()
 	{
-		if (!useComputeShaders)
+		if (!useComputeShaders && !useCL)
 		{
 			// Upload buffers
 			vertexBuffer.flip();
@@ -881,6 +901,23 @@ public class GpuPlugin extends Plugin implements DrawCallbacks
 		 * to save on GPU resources. Small will sort <= 512 faces, large will do <= 4096.
 		 */
 
+		if (useCL)
+		{
+			try
+			{
+				// need to sync here before swapping contexts to opencl
+				gl.glFinish();
+				openCLManager.copyGLBuffers(tmpBufferId, tmpUvBufferId, tmpModelBufferId, tmpModelBufferSmallId, tmpModelBufferUnorderedId, tmpOutBufferId, tmpOutUvBufferId);
+				openCLManager.computeUnordered(unorderedModels);
+			}
+			catch (OpenCLException e)
+			{
+				e.printStackTrace();
+			}
+
+			return;
+		}
+
 		// unordered
 		gl.glUseProgram(glUnorderedComputeProgram);
 
@@ -926,7 +963,7 @@ public class GpuPlugin extends Plugin implements DrawCallbacks
 							SceneTilePaint paint, int tileZ, int tileX, int tileY,
 							int zoom, int centerX, int centerY)
 	{
-		if (!useComputeShaders)
+		if (!useComputeShaders && !useCL)
 		{
 			targetBufferOffset += sceneUploader.upload(paint,
 				tileZ, tileX, tileY,
@@ -963,7 +1000,7 @@ public class GpuPlugin extends Plugin implements DrawCallbacks
 							SceneTileModel model, int tileZ, int tileX, int tileY,
 							int zoom, int centerX, int centerY)
 	{
-		if (!useComputeShaders)
+		if (!useComputeShaders && !useCL)
 		{
 			targetBufferOffset += sceneUploader.upload(model,
 				tileX, tileY,
@@ -1195,7 +1232,7 @@ public class GpuPlugin extends Plugin implements DrawCallbacks
 			gl.glBindVertexArray(vaoHandle);
 
 			int vertexBuffer, uvBuffer;
-			if (useComputeShaders)
+			if (useComputeShaders || useCL)
 			{
 				// Before reading the SSBOs written to from postDrawScene() we must insert a barrier
 				gl.glMemoryBarrier(gl.GL_SHADER_STORAGE_BARRIER_BIT);
@@ -1400,7 +1437,7 @@ public class GpuPlugin extends Plugin implements DrawCallbacks
 	@Subscribe
 	public void onGameStateChanged(GameStateChanged gameStateChanged)
 	{
-		if (!useComputeShaders || gameStateChanged.getGameState() != GameState.LOGGED_IN)
+		if ((!useComputeShaders && !useCL) || gameStateChanged.getGameState() != GameState.LOGGED_IN)
 		{
 			return;
 		}
@@ -1421,6 +1458,7 @@ public class GpuPlugin extends Plugin implements DrawCallbacks
 		IntBuffer vertexBuffer = this.vertexBuffer.getBuffer();
 		FloatBuffer uvBuffer = this.uvBuffer.getBuffer();
 
+		// upload to opengl
 		gl.glBindBuffer(gl.GL_ARRAY_BUFFER, bufferId);
 		gl.glBufferData(gl.GL_ARRAY_BUFFER, vertexBuffer.limit() * Integer.BYTES, vertexBuffer, gl.GL_STATIC_COPY);
 
@@ -1428,6 +1466,19 @@ public class GpuPlugin extends Plugin implements DrawCallbacks
 		gl.glBufferData(gl.GL_ARRAY_BUFFER, uvBuffer.limit() * Float.BYTES, uvBuffer, gl.GL_STATIC_COPY);
 
 		gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0);
+
+		if (useCL)
+		{
+			// upload to opencl
+			try
+			{
+				openCLManager.copySceneBuffers(bufferId, uvBufferId);
+			}
+			catch (OpenCLException e)
+			{
+				e.printStackTrace();
+			}
+		}
 
 		vertexBuffer.clear();
 		uvBuffer.clear();
@@ -1492,7 +1543,7 @@ public class GpuPlugin extends Plugin implements DrawCallbacks
 	@Override
 	public void draw(Renderable renderable, int orientation, int pitchSin, int pitchCos, int yawSin, int yawCos, int x, int y, int z, long hash)
 	{
-		if (!useComputeShaders)
+		if (!useComputeShaders && !useCL)
 		{
 			Model model = renderable instanceof Model ? (Model) renderable : renderable.getModel();
 			if (model != null)
@@ -1634,7 +1685,12 @@ public class GpuPlugin extends Plugin implements DrawCallbacks
 	 */
 	private GpuIntBuffer bufferForTriangles(int triangles)
 	{
-		if (triangles <= SMALL_TRIANGLE_COUNT)
+		if (useCL)
+		{
+			++unorderedModels;
+			return modelBufferUnordered;
+		}
+		else if (triangles <= SMALL_TRIANGLE_COUNT)
 		{
 			++smallModels;
 			return modelBufferSmall;
@@ -1673,7 +1729,7 @@ public class GpuPlugin extends Plugin implements DrawCallbacks
 
 	private int getDrawDistance()
 	{
-		final int limit = useComputeShaders ? MAX_DISTANCE : DEFAULT_DISTANCE;
+		final int limit = (useComputeShaders || useCL) ? MAX_DISTANCE : DEFAULT_DISTANCE;
 		return Ints.constrainToRange(config.drawDistance(), 0, limit);
 	}
 

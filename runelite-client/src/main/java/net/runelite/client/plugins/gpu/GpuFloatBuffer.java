@@ -28,26 +28,26 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 
-class GpuFloatBuffer
+public class GpuFloatBuffer
 {
 	private FloatBuffer buffer = allocateDirect(65536);
 
-	void put(float texture, float u, float v, float pad)
+	public void put(float texture, float u, float v, float pad)
 	{
 		buffer.put(texture).put(u).put(v).put(pad);
 	}
 
-	void flip()
+	public void flip()
 	{
 		buffer.flip();
 	}
 
-	void clear()
+	public void clear()
 	{
 		buffer.clear();
 	}
 
-	void ensureCapacity(int size)
+	public void ensureCapacity(int size)
 	{
 		int capacity = buffer.capacity();
 		final int position = buffer.position();
@@ -66,12 +66,12 @@ class GpuFloatBuffer
 		}
 	}
 
-	FloatBuffer getBuffer()
+	public FloatBuffer getBuffer()
 	{
 		return buffer;
 	}
 
-	static FloatBuffer allocateDirect(int size)
+	public static FloatBuffer allocateDirect(int size)
 	{
 		return ByteBuffer.allocateDirect(size * Float.BYTES)
 			.order(ByteOrder.nativeOrder())

@@ -110,6 +110,18 @@ public interface GpuPluginConfig extends Config
 		return true;
 	}
 
+	@ConfigItem(
+		keyName = "useCL",
+		name = "OpenCL Compute",
+		description = "Offloads face sorting to GPU, enabling extended draw distance. Requires plugin restart.",
+		warning = "This feature requires OpenCL 1.2 to use. Please check that your GPU supports this.\nRestart the plugin for changes to take effect.",
+		position = 10
+	)
+	default boolean useCL()
+	{
+		return false;
+	}
+
 	@Range(
 		min = 0,
 		max = 16
