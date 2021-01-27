@@ -1451,11 +1451,13 @@ public class GpuPlugin extends Plugin implements DrawCallbacks
 		FloatBuffer uvBuffer = this.uvBuffer.getBuffer();
 
 		// upload to opengl
+		long vertexBufferSize = (long) vertexBuffer.limit() * Integer.BYTES;
 		gl.glBindBuffer(gl.GL_ARRAY_BUFFER, bufferId);
-		gl.glBufferData(gl.GL_ARRAY_BUFFER, vertexBuffer.limit() * Integer.BYTES, vertexBuffer, gl.GL_STATIC_COPY);
+		gl.glBufferData(gl.GL_ARRAY_BUFFER, vertexBufferSize, vertexBuffer, gl.GL_STATIC_COPY);
 
+		long uvBufferSize = (long) uvBuffer.limit() * Float.BYTES;
 		gl.glBindBuffer(gl.GL_ARRAY_BUFFER, uvBufferId);
-		gl.glBufferData(gl.GL_ARRAY_BUFFER, uvBuffer.limit() * Float.BYTES, uvBuffer, gl.GL_STATIC_COPY);
+		gl.glBufferData(gl.GL_ARRAY_BUFFER, uvBufferSize, uvBuffer, gl.GL_STATIC_COPY);
 
 		gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0);
 
@@ -1464,7 +1466,7 @@ public class GpuPlugin extends Plugin implements DrawCallbacks
 			// upload to opencl
 			try
 			{
-				openCLManager.copySceneBuffers(bufferId, uvBufferId);
+				openCLManager.copySceneBuffers(vertexBufferSize, uvBufferSize, bufferId, uvBufferId);
 			}
 			catch (OpenCLException e)
 			{

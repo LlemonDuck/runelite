@@ -11,6 +11,7 @@ import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.Objects;
 import java.util.Optional;
 import javax.inject.Singleton;
 import jogamp.opengl.GLContextImpl;
@@ -49,6 +50,7 @@ import static org.jocl.CL.CL_TRUE;
 import static org.jocl.CL.CL_WGL_HDC_KHR;
 import static org.jocl.CL.clBuildProgram;
 import static org.jocl.CL.clCreateBuffer;
+import static org.jocl.CL.clCreateCommandQueue;
 import static org.jocl.CL.clCreateCommandQueueWithProperties;
 import static org.jocl.CL.clCreateContext;
 import static org.jocl.CL.clCreateFromGLBuffer;
@@ -353,7 +355,7 @@ public class OpenCLManager
 
 	private void initQueue() throws OpenCLException
 	{
-		commandQueue = clCreateCommandQueueWithProperties(context, device, new cl_queue_properties(), err);
+		commandQueue = clCreateCommandQueue(context, device, 0, err);
 		checkErr("Could not create command queue");
 		log.debug("Created command_queue {}", commandQueue);
 	}
@@ -424,18 +426,25 @@ public class OpenCLManager
 //		kernelLarge = getKernel(programLarge, "computeLarge");
 	}
 
-	public void copySceneBuffers(int vertexBuffer, int uvBuffer) throws OpenCLException
+	public void copySceneBuffers(long vBufS, long uvBufS, int vertexBuffer, int uvBuffer) throws OpenCLException
 	{
 		Optional.ofNullable(vertexBufferCL).ifPresent(CL::clReleaseMemObject);
 		Optional.ofNullable(uvBufferCL).ifPresent(CL::clReleaseMemObject);
 		vertexBufferCL = null;
 		uvBufferCL = null;
 
-		vertexBufferCL = clCreateFromGLBuffer(context, CL_MEM_READ_ONLY, vertexBuffer, err);
-		checkErr("Couldn't copy vertexBuffer");
+		if (vBufS != 0 && uvBufS != 0)
+		{
+			vertexBufferCL = clCreateFromGLBuffer(context, CL_MEM_READ_ONLY, vertexBuffer, err);
+			checkErr("Couldn't copy vertexBuffer");
 
-		uvBufferCL = clCreateFromGLBuffer(context, CL_MEM_READ_ONLY, uvBuffer, err);
-		checkErr("Couldn't copy uvBuffer");
+			uvBufferCL = clCreateFromGLBuffer(context, CL_MEM_READ_ONLY, uvBuffer, err);
+			checkErr("Couldn't copy uvBuffer");
+		}
+		else
+		{
+			log.warn("Could not copy 0-size buffer into opencl context");
+		}
 	}
 
 	public void copyGLBuffers(int tmpVertexBuffer, int tmpUvBuffer, int tmpModelBuffer, int tmpModelBufferSmall, int tmpModelBufferUnordered, int tmpOutBuffer, int tmpOutUvBuffer) throws OpenCLException
@@ -488,6 +497,11 @@ public class OpenCLManager
 			tmpOutBufferCL,
 			tmpOutUvBufferCL,
 		};
+		if (Arrays.stream(glBuffers).anyMatch(Objects::isNull))
+		{
+			log.warn("Called computeUnordered with null buffers");
+			return;
+		}
 
 		cl_event acquireGLBuffers = new cl_event();
 		clEnqueueAcquireGLObjects(commandQueue, glBuffers.length, glBuffers, 0, null, acquireGLBuffers);
