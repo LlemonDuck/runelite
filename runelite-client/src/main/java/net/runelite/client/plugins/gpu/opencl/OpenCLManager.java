@@ -1,11 +1,8 @@
 package net.runelite.client.plugins.gpu.opencl;
 
-import com.google.common.io.CharStreams;
 import com.jogamp.nativewindow.NativeSurface;
 import com.jogamp.opengl.GL4;
 import com.jogamp.opengl.GLContext;
-import java.io.IOException;
-import java.io.InputStreamReader;
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
@@ -18,14 +15,14 @@ import jogamp.opengl.GLContextImpl;
 import jogamp.opengl.GLDrawableImpl;
 import jogamp.opengl.egl.EGLContext;
 import jogamp.opengl.macosx.cgl.CGL;
-import jogamp.opengl.macosx.cgl.MacOSXCGLContext;
 import jogamp.opengl.windows.wgl.WindowsWGLContext;
 import jogamp.opengl.x11.glx.X11GLXContext;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.client.plugins.gpu.template.Template;
+import net.runelite.client.util.OSType;
 import org.jocl.CL;
-import static org.jocl.CL.CL_CGL_SHAREGROUP_KHR;
+import static org.jocl.CL.CL_CONTEXT_DEVICES;
 import static org.jocl.CL.CL_CONTEXT_PLATFORM;
 import static org.jocl.CL.CL_DEVICE_EXTENSIONS;
 import static org.jocl.CL.CL_DEVICE_TYPE_GPU;
@@ -33,7 +30,6 @@ import static org.jocl.CL.CL_EGL_DISPLAY_KHR;
 import static org.jocl.CL.CL_GLX_DISPLAY_KHR;
 import static org.jocl.CL.CL_GL_CONTEXT_KHR;
 import static org.jocl.CL.CL_KERNEL_FUNCTION_NAME;
-import static org.jocl.CL.CL_MEM_COPY_HOST_PTR;
 import static org.jocl.CL.CL_MEM_READ_ONLY;
 import static org.jocl.CL.CL_MEM_READ_WRITE;
 import static org.jocl.CL.CL_PLATFORM_EXTENSIONS;
@@ -46,22 +42,20 @@ import static org.jocl.CL.CL_PROGRAM_BUILD_LOG;
 import static org.jocl.CL.CL_PROGRAM_BUILD_OPTIONS;
 import static org.jocl.CL.CL_PROGRAM_BUILD_STATUS;
 import static org.jocl.CL.CL_SUCCESS;
-import static org.jocl.CL.CL_TRUE;
 import static org.jocl.CL.CL_WGL_HDC_KHR;
 import static org.jocl.CL.clBuildProgram;
-import static org.jocl.CL.clCreateBuffer;
 import static org.jocl.CL.clCreateCommandQueue;
-import static org.jocl.CL.clCreateCommandQueueWithProperties;
 import static org.jocl.CL.clCreateContext;
+import static org.jocl.CL.clCreateContextFromType;
 import static org.jocl.CL.clCreateFromGLBuffer;
 import static org.jocl.CL.clCreateKernel;
 import static org.jocl.CL.clCreateKernelsInProgram;
 import static org.jocl.CL.clCreateProgramWithSource;
 import static org.jocl.CL.clEnqueueAcquireGLObjects;
 import static org.jocl.CL.clEnqueueNDRangeKernel;
-import static org.jocl.CL.clEnqueueReadBuffer;
 import static org.jocl.CL.clEnqueueReleaseGLObjects;
 import static org.jocl.CL.clFinish;
+import static org.jocl.CL.clGetContextInfo;
 import static org.jocl.CL.clGetDeviceIDs;
 import static org.jocl.CL.clGetDeviceInfo;
 import static org.jocl.CL.clGetKernelInfo;
@@ -69,7 +63,6 @@ import static org.jocl.CL.clGetPlatformIDs;
 import static org.jocl.CL.clGetPlatformInfo;
 import static org.jocl.CL.clGetProgramBuildInfo;
 import static org.jocl.CL.clSetKernelArg;
-import static org.jocl.CL.clWaitForEvents;
 import static org.jocl.CL.stringFor_cl_build_status;
 import static org.jocl.CL.stringFor_cl_platform_info;
 import static org.jocl.CL.stringFor_cl_program_binary_type;
@@ -86,7 +79,6 @@ import org.jocl.cl_kernel;
 import org.jocl.cl_mem;
 import org.jocl.cl_platform_id;
 import org.jocl.cl_program;
-import org.jocl.cl_queue_properties;
 
 @Singleton
 @Slf4j
@@ -144,8 +136,18 @@ public class OpenCLManager
 	public void init(GL4 gl) throws OpenCLException
 	{
 		initPlatform();
-		initDevice();
-		initContext(gl);
+		switch (OSType.getOSType()) {
+			case Windows:
+			case Linux:
+				initDevice();
+				initContext(gl);
+				break;
+			case MacOS:
+				initMacOS(gl);
+				break;
+			default:
+				throw new OpenCLException("Unsupported OS Type " + OSType.getOSType().name());
+		}
 		initQueue();
 		compilePrograms();
 	}
@@ -334,12 +336,6 @@ public class OpenCLManager
 			contextProps.addProperty(CL_GL_CONTEXT_KHR, glContextHandle);
 			contextProps.addProperty(CL_WGL_HDC_KHR, surfaceHandle);
 		}
-		else if (glContext instanceof MacOSXCGLContext)
-		{
-			long cglContext = CGL.getCGLContext(glContextHandle);
-			long cglShareGroup = CGL.CGLGetShareGroup(cglContext);
-			contextProps.addProperty(CONTEXT_PROPERTY_USE_CGL_APPLE, cglShareGroup);
-		}
 		else if (glContext instanceof EGLContext)
 		{
 			long displayHandle = nativeSurface.getDisplayHandle();
@@ -351,6 +347,43 @@ public class OpenCLManager
 		context = clCreateContext(contextProps, 1, new cl_device_id[]{device}, null, null, err);
 		checkErr("Could not create compute context");
 		log.debug("Created compute context {}", context);
+	}
+
+	private void initMacOS(GL4 gl) throws OpenCLException
+	{
+		// set computation platform
+		cl_context_properties contextProps = new cl_context_properties();
+		contextProps.addProperty(CL_CONTEXT_PLATFORM, platform);
+
+		// get sharegroup from gl context
+		GLContext glContext = gl.getContext();
+		if (!glContext.isCurrent())
+			throw new OpenCLException("Can't create context from inactive GL");
+		long glContextHandle = glContext.getHandle();
+		long cglContext = CGL.getCGLContext(glContextHandle);
+		long cglShareGroup = CGL.CGLGetShareGroup(cglContext);
+		contextProps.addProperty(CONTEXT_PROPERTY_USE_CGL_APPLE, cglShareGroup);
+
+		// ask macos to make the context for us
+		log.debug("Creating context with props: {}", contextProps);
+		context = clCreateContextFromType(contextProps, CL_DEVICE_TYPE_GPU, null, null, err);
+		checkErr("Failed to create CLGL context");
+
+		// pull the compute device out of the provided context
+		long[] size = new long[1];
+		err[0] = clGetContextInfo(context, CL_CONTEXT_DEVICES, 0, null, size);
+		checkErr("Could not get device from CLGL context");
+
+		if (size[0] == 0)
+			throw new OpenCLException("CLGL context provided no compute devices");
+
+		// should only be 1 but hey, it's apple
+		cl_device_id[] devices = new cl_device_id[(int) size[0] / Sizeof.cl_device_id];
+		clGetContextInfo(context, CL_CONTEXT_DEVICES, size[0], Pointer.to(devices), null);
+		checkErr("Could not get device from CLGL context");
+
+		device = devices[0];
+		log.debug("Got macOS CLGL compute device {}", device);
 	}
 
 	private void initQueue() throws OpenCLException
