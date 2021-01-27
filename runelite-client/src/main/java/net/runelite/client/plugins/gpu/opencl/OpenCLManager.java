@@ -25,6 +25,7 @@ import net.runelite.client.plugins.gpu.template.Template;
 import org.jocl.CL;
 import static org.jocl.CL.CL_CGL_SHAREGROUP_KHR;
 import static org.jocl.CL.CL_CONTEXT_PLATFORM;
+import static org.jocl.CL.CL_DEVICE_EXTENSIONS;
 import static org.jocl.CL.CL_DEVICE_TYPE_GPU;
 import static org.jocl.CL.CL_EGL_DISPLAY_KHR;
 import static org.jocl.CL.CL_GLX_DISPLAY_KHR;
@@ -59,6 +60,7 @@ import static org.jocl.CL.clEnqueueReadBuffer;
 import static org.jocl.CL.clEnqueueReleaseGLObjects;
 import static org.jocl.CL.clFinish;
 import static org.jocl.CL.clGetDeviceIDs;
+import static org.jocl.CL.clGetDeviceInfo;
 import static org.jocl.CL.clGetKernelInfo;
 import static org.jocl.CL.clGetPlatformIDs;
 import static org.jocl.CL.clGetPlatformInfo;
@@ -283,7 +285,16 @@ public class OpenCLManager
 
 		for (cl_device_id device : devices)
 		{
+			long[] size = new long[1];
+			clGetDeviceInfo(device, CL_DEVICE_EXTENSIONS, 0, null, size);
+			checkErr("Couldn't get device info");
+
+			byte[] devInfoBuf = new byte[(int) size[0]];
+			clGetDeviceInfo(device, CL_DEVICE_EXTENSIONS, devInfoBuf.length, Pointer.to(devInfoBuf), null);
+			checkErr("Couldn't get device info");
+
 			log.debug("Found cl_device_id {}", device);
+			log.debug("DEVICE EXTENSIONS: {}", new String(devInfoBuf));
 		}
 
 		device = devices[0];
