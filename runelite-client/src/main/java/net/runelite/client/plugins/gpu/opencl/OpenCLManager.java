@@ -16,6 +16,7 @@ import javax.inject.Singleton;
 import jogamp.opengl.GLContextImpl;
 import jogamp.opengl.GLDrawableImpl;
 import jogamp.opengl.egl.EGLContext;
+import jogamp.opengl.macosx.cgl.CGL;
 import jogamp.opengl.macosx.cgl.MacOSXCGLContext;
 import jogamp.opengl.windows.wgl.WindowsWGLContext;
 import jogamp.opengl.x11.glx.X11GLXContext;
@@ -333,7 +334,9 @@ public class OpenCLManager
 		}
 		else if (glContext instanceof MacOSXCGLContext)
 		{
-			contextProps.addProperty(CONTEXT_PROPERTY_USE_CGL_APPLE, glContextHandle);
+			long cglContext = CGL.getCGLContext(glContextHandle);
+			long cglShareGroup = CGL.CGLGetShareGroup(cglContext);
+			contextProps.addProperty(CONTEXT_PROPERTY_USE_CGL_APPLE, cglShareGroup);
 		}
 		else if (glContext instanceof EGLContext)
 		{

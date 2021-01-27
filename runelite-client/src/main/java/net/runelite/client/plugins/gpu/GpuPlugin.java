@@ -375,7 +375,7 @@ public class GpuPlugin extends Plugin implements DrawCallbacks
 					{
 						initProgram();
 					}
-					catch (ShaderException ex)
+					catch (ShaderException | OpenCLException ex )
 					{
 						throw new RuntimeException(ex);
 					}
@@ -510,7 +510,7 @@ public class GpuPlugin extends Plugin implements DrawCallbacks
 		return configManager.getConfig(GpuPluginConfig.class);
 	}
 
-	private void initProgram() throws ShaderException
+	private void initProgram() throws ShaderException, OpenCLException
 	{
 		String versionHeader = OSType.getOSType() == OSType.Linux ? LINUX_VERSION_HEADER : WINDOWS_VERSION_HEADER;
 		Template template = new Template();
@@ -535,15 +535,7 @@ public class GpuPlugin extends Plugin implements DrawCallbacks
 		}
 		else if (useCL)
 		{
-			try
-			{
-				openCLManager.init(gl);
-			}
-			catch (OpenCLException e)
-			{
-				useCL = false;
-				e.printStackTrace();
-			}
+			openCLManager.init(gl);
 		}
 
 		initUniforms();
