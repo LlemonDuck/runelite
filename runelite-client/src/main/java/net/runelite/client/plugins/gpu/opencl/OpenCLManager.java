@@ -22,52 +22,6 @@ import lombok.extern.slf4j.Slf4j;
 import net.runelite.client.plugins.gpu.template.Template;
 import net.runelite.client.util.OSType;
 import org.jocl.CL;
-import static org.jocl.CL.CL_CONTEXT_DEVICES;
-import static org.jocl.CL.CL_CONTEXT_PLATFORM;
-import static org.jocl.CL.CL_DEVICE_EXTENSIONS;
-import static org.jocl.CL.CL_DEVICE_TYPE_GPU;
-import static org.jocl.CL.CL_EGL_DISPLAY_KHR;
-import static org.jocl.CL.CL_GLX_DISPLAY_KHR;
-import static org.jocl.CL.CL_GL_CONTEXT_KHR;
-import static org.jocl.CL.CL_KERNEL_FUNCTION_NAME;
-import static org.jocl.CL.CL_MEM_READ_ONLY;
-import static org.jocl.CL.CL_MEM_READ_WRITE;
-import static org.jocl.CL.CL_PLATFORM_EXTENSIONS;
-import static org.jocl.CL.CL_PLATFORM_NAME;
-import static org.jocl.CL.CL_PLATFORM_PROFILE;
-import static org.jocl.CL.CL_PLATFORM_VENDOR;
-import static org.jocl.CL.CL_PLATFORM_VERSION;
-import static org.jocl.CL.CL_PROGRAM_BINARY_TYPE;
-import static org.jocl.CL.CL_PROGRAM_BUILD_LOG;
-import static org.jocl.CL.CL_PROGRAM_BUILD_OPTIONS;
-import static org.jocl.CL.CL_PROGRAM_BUILD_STATUS;
-import static org.jocl.CL.CL_SUCCESS;
-import static org.jocl.CL.CL_WGL_HDC_KHR;
-import static org.jocl.CL.clBuildProgram;
-import static org.jocl.CL.clCreateCommandQueue;
-import static org.jocl.CL.clCreateContext;
-import static org.jocl.CL.clCreateContextFromType;
-import static org.jocl.CL.clCreateFromGLBuffer;
-import static org.jocl.CL.clCreateKernel;
-import static org.jocl.CL.clCreateKernelsInProgram;
-import static org.jocl.CL.clCreateProgramWithSource;
-import static org.jocl.CL.clEnqueueAcquireGLObjects;
-import static org.jocl.CL.clEnqueueNDRangeKernel;
-import static org.jocl.CL.clEnqueueReleaseGLObjects;
-import static org.jocl.CL.clFinish;
-import static org.jocl.CL.clGetContextInfo;
-import static org.jocl.CL.clGetDeviceIDs;
-import static org.jocl.CL.clGetDeviceInfo;
-import static org.jocl.CL.clGetKernelInfo;
-import static org.jocl.CL.clGetPlatformIDs;
-import static org.jocl.CL.clGetPlatformInfo;
-import static org.jocl.CL.clGetProgramBuildInfo;
-import static org.jocl.CL.clSetKernelArg;
-import static org.jocl.CL.stringFor_cl_build_status;
-import static org.jocl.CL.stringFor_cl_platform_info;
-import static org.jocl.CL.stringFor_cl_program_binary_type;
-import static org.jocl.CL.stringFor_cl_program_build_info;
-import static org.jocl.CL.stringFor_errorCode;
 import org.jocl.Pointer;
 import org.jocl.Sizeof;
 import org.jocl.cl_command_queue;
@@ -80,13 +34,14 @@ import org.jocl.cl_mem;
 import org.jocl.cl_platform_id;
 import org.jocl.cl_program;
 
+import static org.jocl.CL.*;
+
 @Singleton
 @Slf4j
 public class OpenCLManager
 {
 
 	private static final long WORK_ITEMS_PER_WORK_GROUP = 6;
-	private static final int CONTEXT_PROPERTY_USE_CGL_APPLE = 268435456;
 	private static final String GL_SHARING_PLATFORM_EXT = "cl_khr_gl_sharing";
 	private static final String MACOS_GL_SHARING_PLATFORM_EXT = "cl_APPLE_gl_sharing";
 
@@ -362,7 +317,7 @@ public class OpenCLManager
 		long glContextHandle = glContext.getHandle();
 		long cglContext = CGL.getCGLContext(glContextHandle);
 		long cglShareGroup = CGL.CGLGetShareGroup(cglContext);
-		contextProps.addProperty(CONTEXT_PROPERTY_USE_CGL_APPLE, cglShareGroup);
+		contextProps.addProperty(CL_CONTEXT_PROPERTY_USE_CGL_SHAREGROUP_APPLE, cglShareGroup);
 
 		// ask macos to make the context for us
 		log.debug("Creating context with props: {}", contextProps);
@@ -371,7 +326,7 @@ public class OpenCLManager
 
 		// pull the compute device out of the provided context
 		long[] size = new long[1];
-		err[0] = clGetContextInfo(context, CL_CONTEXT_DEVICES, 0, null, size);
+		err[0] = clGetGLContextInfoAPPLE(context, cglContext, CL_CGL_DEVICE_FOR_CURRENT_VIRTUAL_SCREEN_APPLE, 0, null, size);
 		checkErr("Could not get device from CLGL context");
 
 		if (size[0] == 0)
@@ -379,7 +334,7 @@ public class OpenCLManager
 
 		// should only be 1 but hey, it's apple
 		cl_device_id[] devices = new cl_device_id[(int) size[0] / Sizeof.cl_device_id];
-		clGetContextInfo(context, CL_CONTEXT_DEVICES, size[0], Pointer.to(devices), null);
+		clGetGLContextInfoAPPLE(context, cglContext, CL_CGL_DEVICE_FOR_CURRENT_VIRTUAL_SCREEN_APPLE, size[0], Pointer.to(devices), null);
 		checkErr("Could not get device from CLGL context");
 
 		device = devices[0];

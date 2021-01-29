@@ -44,11 +44,10 @@
 
 	<dependencies>
 		<dependency>
-			<groupId>org.jocl</groupId>
+			<groupId>com.duckblade</groupId>
 			<artifactId>jocl</artifactId>
-			<version>2.0.2</version>
+			<version>2.0.3-SNAPSHOT</version>
 		</dependency>
-
 		<dependency>
 			<groupId>org.slf4j</groupId>
 			<artifactId>slf4j-api</artifactId>
