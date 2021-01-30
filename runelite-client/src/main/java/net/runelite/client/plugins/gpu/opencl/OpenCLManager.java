@@ -321,7 +321,7 @@ public class OpenCLManager
 
 		// ask macos to make the context for us
 		log.debug("Creating context with props: {}", contextProps);
-		context = clCreateContextFromType(contextProps, CL_DEVICE_TYPE_GPU, null, null, err);
+		context = clCreateContext(contextProps, 0, null, null, null, err);
 		checkErr("Failed to create CLGL context");
 
 		// pull the compute device out of the provided context
