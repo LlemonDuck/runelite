@@ -1227,7 +1227,12 @@ public class GpuPlugin extends Plugin implements DrawCallbacks
 			if (useComputeShaders || useCL)
 			{
 				// Before reading the SSBOs written to from postDrawScene() we must insert a barrier
-				gl.glMemoryBarrier(gl.GL_SHADER_STORAGE_BARRIER_BIT);
+				// opencl handles its own barrier
+				if (useComputeShaders)
+				{
+					gl.glMemoryBarrier(gl.GL_SHADER_STORAGE_BARRIER_BIT);
+				}
+				
 				// Draw using the output buffer of the compute
 				vertexBuffer = tmpOutBufferId;
 				uvBuffer = tmpOutUvBufferId;
