@@ -310,8 +310,7 @@ public class OpenCLManager
 		GLContext glContext = gl.getContext();
 		if (!glContext.isCurrent())
 			throw new OpenCLException("Can't create context from inactive GL");
-		long glContextHandle = glContext.getHandle();
-		long cglContext = CGL.getCGLContext(glContextHandle);
+		long cglContext = CGL.CGLGetCurrentContext();
 		long cglShareGroup = CGL.CGLGetShareGroup(cglContext);
 		
 		// build context props

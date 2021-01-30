@@ -404,7 +404,7 @@ public class GpuPlugin extends Plugin implements DrawCallbacks
 
 				if (client.getGameState() == GameState.LOGGED_IN)
 				{
-					uploadScene();
+					invokeOnMainThread(this::uploadScene);
 				}
 			}
 			catch (Throwable e)
@@ -1439,7 +1439,7 @@ public class GpuPlugin extends Plugin implements DrawCallbacks
 			return;
 		}
 
-		uploadScene();
+		invokeOnMainThread(this::uploadScene);
 	}
 
 	private void uploadScene()
