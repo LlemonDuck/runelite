@@ -516,9 +516,13 @@ public class GpuPlugin extends Plugin implements DrawCallbacks
 		Template template = new Template();
 		template.add(key ->
 		{
-			if ("version_header".equals(key))
+			if ("header".equals(key))
 			{
-				return versionHeader;
+				return versionHeader + template.load("prelude.glsl");
+			}
+			if ("prelude".equals(key))
+			{
+				return template.load("prelude.glsl");
 			}
 			return null;
 		});

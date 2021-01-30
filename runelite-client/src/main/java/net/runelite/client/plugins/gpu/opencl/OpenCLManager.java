@@ -19,6 +19,7 @@ import jogamp.opengl.windows.wgl.WindowsWGLContext;
 import jogamp.opengl.x11.glx.X11GLXContext;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import net.runelite.client.plugins.gpu.GpuPlugin;
 import net.runelite.client.plugins.gpu.template.Template;
 import net.runelite.client.util.OSType;
 import org.jocl.CL;
@@ -41,15 +42,31 @@ import static org.jocl.CL.*;
 public class OpenCLManager
 {
 
+	private static final int VAR_KERNEL_FACE_STRIDE = 8;
 	private static final long WORK_ITEMS_PER_WORK_GROUP = 6;
 	private static final String GL_SHARING_PLATFORM_EXT = "cl_khr_gl_sharing";
 	private static final String MACOS_GL_SHARING_PLATFORM_EXT = "cl_APPLE_gl_sharing";
 
 	private static final Template BASE_TEMPLATE =
-		new Template().addInclude(OpenCLManager.class);
+		new Template().addInclude(GpuPlugin.class);
+
+	static
+	{
+		BASE_TEMPLATE.add(key ->
+		{
+			if ("header".equals(key) || "prelude".equals(key))
+			{
+				return BASE_TEMPLATE.load("prelude.cl");
+			}
+			return null;
+		});
+	}
 
 	private static final String SOURCE_COMPUTE_UNORDERED =
-		BASE_TEMPLATE.load("comp_unordered.cl");
+		BASE_TEMPLATE.load("comp_unordered.glsl");
+	
+	private static final String SOURCE_COMPUTE_VARIABLE =
+		BASE_TEMPLATE.load("comp_var.cl");
 
 	private final int[] err = new int[1];
 
@@ -59,12 +76,10 @@ public class OpenCLManager
 	private cl_command_queue commandQueue;
 
 	private cl_program programUnordered;
-	private cl_program programSmall;
-	private cl_program programLarge;
+	private cl_program programVariable;
 
 	private cl_kernel kernelUnordered;
-	private cl_kernel kernelSmall;
-	private cl_kernel kernelLarge;
+	private cl_kernel kernelVariable;
 
 	private cl_mem vertexBufferCL;
 	private cl_mem uvBufferCL;
@@ -84,9 +99,8 @@ public class OpenCLManager
 	@Getter
 	private FloatBuffer uvBufferOut;
 
-	private static final String KERNEL_NAME_UNORDERED = "computeUnordered";
-	private static final String KERNEL_NAME_SMALL = "computeSmall";
-	private static final String KERNEL_NAME_LARGE = "computeLarge";
+	private static final String KERNEL_NAME_UNORDERED = "main";
+	private static final String KERNEL_NAME_VARIABLE = "main";
 
 	public void init(GL4 gl) throws OpenCLException
 	{
@@ -139,11 +153,8 @@ public class OpenCLManager
 		Optional.ofNullable(programUnordered).ifPresent(CL::clReleaseProgram);
 		programUnordered = null;
 
-		Optional.ofNullable(programSmall).ifPresent(CL::clReleaseProgram);
-		programSmall = null;
-
-		Optional.ofNullable(programLarge).ifPresent(CL::clReleaseProgram);
-		programLarge = null;
+		Optional.ofNullable(programVariable).ifPresent(CL::clReleaseProgram);
+		programVariable = null;
 
 		Optional.ofNullable(commandQueue).ifPresent(CL::clReleaseCommandQueue);
 		commandQueue = null;
@@ -395,12 +406,10 @@ public class OpenCLManager
 	private void compilePrograms() throws OpenCLException
 	{
 		programUnordered = compileProgram(SOURCE_COMPUTE_UNORDERED);
-//		compileProgram("comp_small.cl");
-//		compileProgram("comp_large.cl");
+		programVariable = compileProgram(SOURCE_COMPUTE_VARIABLE);
 
-		kernelUnordered = getKernel(programUnordered, "computeUnordered");
-//		kernelSmall = getKernel(programSmall, "computeSmall");
-//		kernelLarge = getKernel(programLarge, "computeLarge");
+		kernelUnordered = getKernel(programUnordered, KERNEL_NAME_UNORDERED);
+		kernelVariable = getKernel(programVariable, KERNEL_NAME_VARIABLE);
 	}
 
 	public void copySceneBuffers(long vBufS, long uvBufS, int vertexBuffer, int uvBuffer) throws OpenCLException

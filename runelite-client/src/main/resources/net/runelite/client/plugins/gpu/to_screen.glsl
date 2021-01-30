@@ -23,6 +23,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include prelude
+
 /*
  * Convert a vertex to screen space
  */
@@ -43,5 +45,5 @@ vec3 toScreen(ivec3 vertex, int cameraYaw, int cameraPitch, int centerX, int cen
   float y = var13 * zoom / var12 + centerY;
   float z = -var12; // in OpenGL depth is negative
 
-  return vec3(x, y, z);
+  return NEWVEC(vec3)(x, y, z);
 }
