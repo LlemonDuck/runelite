@@ -90,10 +90,10 @@ public class OpenCLManager
 
 	public void init(GL4 gl) throws OpenCLException
 	{
-		initPlatform();
 		switch (OSType.getOSType()) {
 			case Windows:
 			case Linux:
+				initPlatform();
 				initDevice();
 				initContext(gl);
 				break;
@@ -306,10 +306,6 @@ public class OpenCLManager
 
 	private void initMacOS(GL4 gl) throws OpenCLException
 	{
-		// set computation platform
-		cl_context_properties contextProps = new cl_context_properties();
-		contextProps.addProperty(CL_CONTEXT_PLATFORM, platform);
-
 		// get sharegroup from gl context
 		GLContext glContext = gl.getContext();
 		if (!glContext.isCurrent())
@@ -317,6 +313,9 @@ public class OpenCLManager
 		long glContextHandle = glContext.getHandle();
 		long cglContext = CGL.getCGLContext(glContextHandle);
 		long cglShareGroup = CGL.CGLGetShareGroup(cglContext);
+		
+		// build context props
+		cl_context_properties contextProps = new cl_context_properties();
 		contextProps.addProperty(CL_CONTEXT_PROPERTY_USE_CGL_SHAREGROUP_APPLE, cglShareGroup);
 
 		// ask macos to make the context for us
