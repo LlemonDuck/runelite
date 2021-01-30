@@ -43,7 +43,9 @@ public class OpenCLManager
 {
 
 	private static final int VAR_KERNEL_FACE_STRIDE = 8;
-	private static final long WORK_ITEMS_PER_WORK_GROUP = 6;
+	private static final long FACES_PER_ITEM_UNORDERED = 6;
+	private static final long FACES_PER_ITEM_SMALL = 512;
+	private static final long FACES_PER_ITEM_LARGE = 4096;
 	private static final String GL_SHARING_PLATFORM_EXT = "cl_khr_gl_sharing";
 	private static final String MACOS_GL_SHARING_PLATFORM_EXT = "cl_APPLE_gl_sharing";
 
@@ -92,6 +94,10 @@ public class OpenCLManager
 	private cl_mem tmpModelBufferCL; // scene model buffer, large
 	private cl_mem tmpModelBufferSmallCL; // scene model buffer, small
 	private cl_mem tmpModelBufferUnorderedCL;
+	
+	private cl_mem uniformBufferCL;
+	
+	private cl_mem[] lockedGLMemoryBuffers;
 
 	@Getter
 	private IntBuffer vertexBufferOut;
@@ -392,6 +398,7 @@ public class OpenCLManager
 				byte[] kernelNameBuf = new byte[(int) size[0]];
 				err[0] = clGetKernelInfo(k, CL_KERNEL_FUNCTION_NAME, kernelNameBuf.length, Pointer.to(kernelNameBuf), null);
 				checkErr("Could not get kernel info for kernel " + k);
+
 				String kName = new String(kernelNameBuf);
 				log.debug("Found kernel " + kName + " in program " + program);
 			}
@@ -410,6 +417,15 @@ public class OpenCLManager
 
 		kernelUnordered = getKernel(programUnordered, KERNEL_NAME_UNORDERED);
 		kernelVariable = getKernel(programVariable, KERNEL_NAME_VARIABLE);
+	}
+	
+	public void copyUniformBuffer(int uniformBuffer) throws OpenCLException
+	{
+		Optional.ofNullable(uniformBufferCL).ifPresent(CL::clReleaseMemObject);
+		uniformBufferCL = null;
+		
+		uniformBufferCL = clCreateFromGLBuffer(context, CL_MEM_READ_ONLY, uniformBuffer, err);
+		checkErr("Couldn't copy uniform buffer");
 	}
 
 	public void copySceneBuffers(long vBufS, long uvBufS, int vertexBuffer, int uvBuffer) throws OpenCLException
@@ -433,20 +449,14 @@ public class OpenCLManager
 		}
 	}
 
-	public void copyGLBuffers(int tmpVertexBuffer, int tmpUvBuffer, int tmpModelBuffer, int tmpModelBufferSmall, int tmpModelBufferUnordered, int tmpOutBuffer, int tmpOutUvBuffer) throws OpenCLException
+	public void copyGLBuffers(int tmpVertexBuffer, int tmpUvBuffer, int tmpOutBuffer, int tmpOutUvBuffer) throws OpenCLException
 	{
 		Optional.ofNullable(tmpVertexBufferCL).ifPresent(CL::clReleaseMemObject);
 		Optional.ofNullable(tmpUvBufferCL).ifPresent(CL::clReleaseMemObject);
-//		Optional.ofNullable(tmpModelBufferCL).ifPresent(CL::clReleaseMemObject);
-//		Optional.ofNullable(tmpModelBufferSmallCL).ifPresent(CL::clReleaseMemObject);
-		Optional.ofNullable(tmpModelBufferUnorderedCL).ifPresent(CL::clReleaseMemObject);
 		Optional.ofNullable(tmpOutBufferCL).ifPresent(CL::clReleaseMemObject);
 		Optional.ofNullable(tmpOutUvBufferCL).ifPresent(CL::clReleaseMemObject);
 		tmpVertexBufferCL = null;
 		tmpUvBufferCL = null;
-//		tmpModelBufferCL = null;
-//		tmpModelBufferSmallCL = null;
-		tmpModelBufferUnorderedCL = null;
 		tmpOutBufferCL = null;
 		tmpOutUvBufferCL = null;
 
@@ -456,60 +466,131 @@ public class OpenCLManager
 		tmpUvBufferCL = clCreateFromGLBuffer(context, CL_MEM_READ_ONLY, tmpUvBuffer, err);
 		checkErr("Couldn't copy tmpUvBuffer");
 
-//		tmpModelBufferCL = clCreateFromGLBuffer(context, CL_MEM_READ_ONLY, tmpModelBuffer, err);
-//		checkErr("Couldn't copy tmpModelBuffer");
-
-//		tmpModelBufferSmallCL = clCreateFromGLBuffer(context, CL_MEM_READ_ONLY, tmpModelBufferSmall, err);
-//		checkErr("Couldn't copy tmpModelBufferSmall");
-
-		tmpModelBufferUnorderedCL = clCreateFromGLBuffer(context, CL_MEM_READ_ONLY, tmpModelBufferUnordered, err);
-		checkErr("Couldn't copy tmpModelBufferUnordered");
-
 		tmpOutBufferCL = clCreateFromGLBuffer(context, CL_MEM_READ_WRITE, tmpOutBuffer, err);
 		checkErr("Couldn't copy tmpModelBufferUnordered");
 
 		tmpOutUvBufferCL = clCreateFromGLBuffer(context, CL_MEM_READ_WRITE, tmpOutUvBuffer, err);
 		checkErr("Couldn't copy tmpOutUvBuffer");
 	}
-
-	public void computeUnordered(int unorderedModels) throws OpenCLException
+	
+	public void copyModelBuffers(int largeModels, int tmpModelBuffer, int smallModels, int tmpModelBufferSmall, int unorderedModels, int tmpModelBufferUnordered) throws OpenCLException
 	{
-		cl_mem[] glBuffers = {
+		Optional.ofNullable(tmpModelBufferCL).ifPresent(CL::clReleaseMemObject);
+		Optional.ofNullable(tmpModelBufferSmallCL).ifPresent(CL::clReleaseMemObject);
+		Optional.ofNullable(tmpModelBufferUnorderedCL).ifPresent(CL::clReleaseMemObject);
+		tmpModelBufferCL = null;
+		tmpModelBufferSmallCL = null;
+		tmpModelBufferUnorderedCL = null;
+		
+		if (largeModels != 0)
+		{
+			tmpModelBufferCL = clCreateFromGLBuffer(context, CL_MEM_READ_ONLY, tmpModelBuffer, err);
+			checkErr("Couldn't copy tmpModelBuffer");
+		}
+
+		if (smallModels != 0)
+		{
+			tmpModelBufferSmallCL = clCreateFromGLBuffer(context, CL_MEM_READ_ONLY, tmpModelBufferSmall, err);
+			checkErr("Couldn't copy tmpModelBufferSmall");
+		}
+
+		if (unorderedModels != 0)
+		{
+			tmpModelBufferUnorderedCL = clCreateFromGLBuffer(context, CL_MEM_READ_ONLY, tmpModelBufferUnordered, err);
+			checkErr("Couldn't copy tmpModelBufferUnordered");
+		}
+	}
+	
+	private cl_event acquireGLMemoryLocks() throws OpenCLException
+	{
+		lockedGLMemoryBuffers = new cl_mem[] {
 			tmpModelBufferUnorderedCL,
+			tmpModelBufferSmallCL,
+			tmpModelBufferCL,
 			vertexBufferCL,
 			tmpVertexBufferCL,
 			uvBufferCL,
 			tmpUvBufferCL,
 			tmpOutBufferCL,
 			tmpOutUvBufferCL,
+			uniformBufferCL,
 		};
-		if (Arrays.stream(glBuffers).anyMatch(Objects::isNull))
+		if (Arrays.stream(lockedGLMemoryBuffers).anyMatch(Objects::isNull))
 		{
-			log.warn("Called computeUnordered with null buffers");
-			return;
+			throw new OpenCLException("Called lock on null memory buffers");
 		}
 
 		cl_event acquireGLBuffers = new cl_event();
-		clEnqueueAcquireGLObjects(commandQueue, glBuffers.length, glBuffers, 0, null, acquireGLBuffers);
+		clEnqueueAcquireGLObjects(commandQueue, lockedGLMemoryBuffers.length, lockedGLMemoryBuffers, 0, null, acquireGLBuffers);
+		return acquireGLBuffers;
+	}
 
-		clSetKernelArg(kernelUnordered, 0, Sizeof.cl_mem, Pointer.to(tmpModelBufferUnorderedCL));
-		clSetKernelArg(kernelUnordered, 1, Sizeof.cl_mem, Pointer.to(vertexBufferCL));
-		clSetKernelArg(kernelUnordered, 2, Sizeof.cl_mem, Pointer.to(tmpVertexBufferCL));
-		clSetKernelArg(kernelUnordered, 3, Sizeof.cl_mem, Pointer.to(uvBufferCL));
-		clSetKernelArg(kernelUnordered, 4, Sizeof.cl_mem, Pointer.to(tmpUvBufferCL));
-		clSetKernelArg(kernelUnordered, 5, Sizeof.cl_mem, Pointer.to(tmpOutBufferCL));
-		clSetKernelArg(kernelUnordered, 6, Sizeof.cl_mem, Pointer.to(tmpOutUvBufferCL));
+	private cl_event releaseGLMemoryLocks(cl_event[] waitOn) throws OpenCLException
+	{
+		cl_event release = new cl_event();
+		clEnqueueReleaseGLObjects(commandQueue, lockedGLMemoryBuffers.length, lockedGLMemoryBuffers, waitOn.length, waitOn, null);
+		return release; 
+	}
+	
+	private void setArgs(cl_kernel kernel, int base, cl_mem... argPointers) throws OpenCLException
+	{
+		for (int i = 0; i < argPointers.length; i++)
+		{
+			clSetKernelArg(kernel, base + i, Sizeof.cl_mem, Pointer.to(argPointers[i]));
+		}
+	}
 
+	private cl_event computeUnordered(int unorderedCount, cl_event[] waitOn) throws OpenCLException
+	{
+		if (unorderedCount == 0)
+		{
+			return null;
+		}
+		
 		// queue compute call after acquireGLBuffers
 		cl_event compute = new cl_event();
-		err[0] = clEnqueueNDRangeKernel(commandQueue, kernelUnordered, 1, null, new long[] { unorderedModels * WORK_ITEMS_PER_WORK_GROUP }, new long[] { WORK_ITEMS_PER_WORK_GROUP }, 1, new cl_event[]{acquireGLBuffers}, compute);
+		setArgs(kernelUnordered, 0, tmpModelBufferUnorderedCL, vertexBufferCL, tmpVertexBufferCL, tmpOutBufferCL, tmpOutUvBufferCL, uvBufferCL, tmpUvBufferCL, uniformBufferCL);
+		err[0] = clEnqueueNDRangeKernel(commandQueue, kernelUnordered, 1, null, new long[]{unorderedCount * FACES_PER_ITEM_UNORDERED}, new long[]{FACES_PER_ITEM_UNORDERED}, waitOn.length, waitOn, compute);
 		checkErr("Could not enqueue compute order");
+		return compute;
+	}
+	
+	private cl_event computeVariable(int modelCount, long size, cl_mem tmpModelBufferCL, cl_event[] waitOn) throws OpenCLException
+	{
+		if (modelCount == 0)
+		{
+			return null;
+		}
 
-		// queue release call after compute
-		clEnqueueReleaseGLObjects(commandQueue, glBuffers.length, glBuffers, 1, new cl_event[]{compute}, null);
-
-		err[0] = clFinish(commandQueue);
-		checkErr("Could not synchronize with end of CL compute call");
+		// queue compute call after acquireGLBuffers
+		size /= VAR_KERNEL_FACE_STRIDE;
+		cl_event compute = new cl_event();
+		clSetKernelArg(kernelVariable, 0, (12 + 12 + 18 + 1 + (size * VAR_KERNEL_FACE_STRIDE)) * 4, null);
+		setArgs(kernelVariable, 1, tmpModelBufferCL, vertexBufferCL, tmpVertexBufferCL, tmpOutBufferCL, tmpOutUvBufferCL, uvBufferCL, tmpUvBufferCL, uniformBufferCL);
+		err[0] = clEnqueueNDRangeKernel(commandQueue, kernelUnordered, 1, null, new long[]{modelCount * size}, new long[]{size}, waitOn.length, waitOn, compute);
+		checkErr("Could not enqueue compute order");
+		return compute;
+	}
+	
+	public void computeAll(int unorderedCount, int smallCount, int largeCount) throws OpenCLException
+	{
+		cl_event[] acquireArr = new cl_event[1];
+		acquireArr[0] = acquireGLMemoryLocks();
+		
+		cl_event[] computes = new cl_event[3];
+		try
+		{
+			computes[0] = computeUnordered(unorderedCount, acquireArr);
+			computes[1] = computeVariable(smallCount, FACES_PER_ITEM_SMALL, tmpModelBufferSmallCL, acquireArr);
+			computes[2] = computeVariable(largeCount, FACES_PER_ITEM_LARGE, tmpModelBufferCL, acquireArr);
+		}
+		finally
+		{
+			// queue release call after compute
+			releaseGLMemoryLocks(computes);
+			err[0] = clFinish(commandQueue);
+			checkErr("Could not synchronize with end of CL compute call");
+		}
 	}
 
 }

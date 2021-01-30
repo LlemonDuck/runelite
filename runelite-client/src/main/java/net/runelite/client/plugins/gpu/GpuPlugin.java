@@ -740,6 +740,18 @@ public class GpuPlugin extends Plugin implements DrawCallbacks
 
 		gl.glBufferData(gl.GL_UNIFORM_BUFFER, uniformBuffer.limit() * Integer.BYTES, uniformBuffer, gl.GL_DYNAMIC_DRAW);
 		gl.glBindBuffer(gl.GL_UNIFORM_BUFFER, 0);
+		
+		if (useCL)
+		{
+			try
+			{
+				openCLManager.copyUniformBuffer(uniformBufferId);
+			}
+			catch (OpenCLException e)
+			{
+				e.printStackTrace();
+			}
+		}
 	}
 
 	private void initAAFbo(int width, int height, int aaSamples)
@@ -903,8 +915,9 @@ public class GpuPlugin extends Plugin implements DrawCallbacks
 			{
 				// need to sync here before swapping contexts to opencl
 				gl.glFinish();
-				openCLManager.copyGLBuffers(tmpBufferId, tmpUvBufferId, tmpModelBufferId, tmpModelBufferSmallId, tmpModelBufferUnorderedId, tmpOutBufferId, tmpOutUvBufferId);
-				openCLManager.computeUnordered(unorderedModels);
+				openCLManager.copyGLBuffers(tmpBufferId, tmpUvBufferId, tmpOutBufferId, tmpOutUvBufferId);
+				openCLManager.copyModelBuffers(largeModels, tmpModelBufferId, smallModels, tmpModelBufferSmallId, unorderedModels, tmpModelBufferUnorderedId);
+				openCLManager.computeAll(unorderedModels, smallModels, largeModels);
 			}
 			catch (OpenCLException e)
 			{
@@ -1688,12 +1701,13 @@ public class GpuPlugin extends Plugin implements DrawCallbacks
 	 */
 	private GpuIntBuffer bufferForTriangles(int triangles)
 	{
-		if (useCL)
-		{
-			++unorderedModels;
-			return modelBufferUnordered;
-		}
-		else if (triangles <= SMALL_TRIANGLE_COUNT)
+//		if (useCL)
+//		{
+//			++unorderedModels;
+//			return modelBufferUnordered;
+//		}
+//		else
+			if (triangles <= SMALL_TRIANGLE_COUNT)
 		{
 			++smallModels;
 			return modelBufferSmall;
