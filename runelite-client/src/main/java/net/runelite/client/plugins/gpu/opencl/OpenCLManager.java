@@ -325,19 +325,10 @@ public class OpenCLManager
 		checkErr("Failed to create CLGL context");
 
 		// pull the compute device out of the provided context
-		long[] size = new long[1];
-		err[0] = clGetGLContextInfoAPPLE(context, cglContext, CL_CGL_DEVICE_FOR_CURRENT_VIRTUAL_SCREEN_APPLE, 0, null, size);
+		device = new cl_device_id();
+		clGetGLContextInfoAPPLE(context, cglContext, CL_CGL_DEVICE_FOR_CURRENT_VIRTUAL_SCREEN_APPLE, Sizeof.cl_device_id, Pointer.to(device), null);
 		checkErr("Could not get device from CLGL context");
 
-		if (size[0] == 0)
-			throw new OpenCLException("CLGL context provided no compute devices");
-
-		// should only be 1 but hey, it's apple
-		cl_device_id[] devices = new cl_device_id[(int) size[0] / Sizeof.cl_device_id];
-		clGetGLContextInfoAPPLE(context, cglContext, CL_CGL_DEVICE_FOR_CURRENT_VIRTUAL_SCREEN_APPLE, size[0], Pointer.to(devices), null);
-		checkErr("Could not get device from CLGL context");
-
-		device = devices[0];
 		log.debug("Got macOS CLGL compute device {}", device);
 	}
 
