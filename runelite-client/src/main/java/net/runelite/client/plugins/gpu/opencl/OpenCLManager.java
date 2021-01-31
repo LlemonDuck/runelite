@@ -524,8 +524,6 @@ public class OpenCLManager
 		cl_event computeUnordered = new cl_event();
 		err[0] = clEnqueueNDRangeKernel(commandQueue, kernelUnordered, 1, null, new long[] { unorderedModels * WORK_ITEMS_PER_WORK_GROUP }, new long[] { WORK_ITEMS_PER_WORK_GROUP }, 1, new cl_event[]{acquireGLBuffers}, computeUnordered);
 		checkErr("Could not enqueue compute order");
-		err[0] = clFinish(commandQueue);
-		checkErr("Could not synchronize with end of CL compute call");
 		
 		clSetKernelArg(kernelSmall, 0, (12 + 12 + 18 + 1 + 512) * 4, null);
 		clSetKernelArg(kernelSmall, 1, Sizeof.cl_mem, Pointer.to(tmpModelBufferSmallCL));
@@ -540,8 +538,6 @@ public class OpenCLManager
 		cl_event computeSmall = new cl_event();
 		err[0] = clEnqueueNDRangeKernel(commandQueue, kernelSmall, 1, null, new long[] {smallModels * 512L}, new long[] {512}, 1, new cl_event[]{computeUnordered}, computeSmall);
 		checkErr("Could not enqueue small compute order");
-		err[0] = clFinish(commandQueue);
-		checkErr("Could not synchronize with end of CL compute call");
 		
 		clSetKernelArg(kernelLarge, 0, (12 + 12 + 18 + 1 + 4096) * 4, null);
 		clSetKernelArg(kernelLarge, 1, Sizeof.cl_mem, Pointer.to(tmpModelBufferCL));
@@ -556,8 +552,6 @@ public class OpenCLManager
 		cl_event computeLarge = new cl_event();
 		err[0] = clEnqueueNDRangeKernel(commandQueue, kernelLarge, 1, null, new long[] {largeModels * 1024L}, new long[] {1024}, 1, new cl_event[]{computeSmall}, computeLarge);
 		checkErr("Could not enqueue large compute order");
-		err[0] = clFinish(commandQueue);
-		checkErr("Could not synchronize with end of CL compute call");
 
 		// queue release call after compute
 		clEnqueueReleaseGLObjects(commandQueue, glBuffers.length, glBuffers, 1, new cl_event[]{computeLarge}, null);
