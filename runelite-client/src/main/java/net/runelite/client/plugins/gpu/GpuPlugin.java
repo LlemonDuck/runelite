@@ -375,7 +375,7 @@ public class GpuPlugin extends Plugin implements DrawCallbacks
 					{
 						initProgram();
 					}
-					catch (ShaderException | OpenCLException ex )
+					catch (ShaderException | OpenCLException ex)
 					{
 						throw new RuntimeException(ex);
 					}
@@ -736,7 +736,7 @@ public class GpuPlugin extends Plugin implements DrawCallbacks
 
 		gl.glBufferData(gl.GL_UNIFORM_BUFFER, uniformBuffer.limit() * Integer.BYTES, uniformBuffer, gl.GL_DYNAMIC_DRAW);
 		gl.glBindBuffer(gl.GL_UNIFORM_BUFFER, 0);
-		
+
 		if (useCL)
 		{
 			try
@@ -971,8 +971,8 @@ public class GpuPlugin extends Plugin implements DrawCallbacks
 
 	@Override
 	public void drawScenePaint(int orientation, int pitchSin, int pitchCos, int yawSin, int yawCos, int x, int y, int z,
-							SceneTilePaint paint, int tileZ, int tileX, int tileY,
-							int zoom, int centerX, int centerY)
+							   SceneTilePaint paint, int tileZ, int tileX, int tileY,
+							   int zoom, int centerX, int centerY)
 	{
 		if (!useComputeShaders && !useCL)
 		{
@@ -1008,8 +1008,8 @@ public class GpuPlugin extends Plugin implements DrawCallbacks
 
 	@Override
 	public void drawSceneModel(int orientation, int pitchSin, int pitchCos, int yawSin, int yawCos, int x, int y, int z,
-							SceneTileModel model, int tileZ, int tileX, int tileY,
-							int zoom, int centerX, int centerY)
+							   SceneTileModel model, int tileZ, int tileX, int tileY,
+							   int zoom, int centerX, int centerY)
 	{
 		if (!useComputeShaders && !useCL)
 		{
@@ -1172,18 +1172,18 @@ public class GpuPlugin extends Plugin implements DrawCallbacks
 				renderCanvasHeight = dim.height;
 
 				double scaleFactorY = dim.getHeight() / canvasHeight;
-				double scaleFactorX = dim.getWidth()  / canvasWidth;
+				double scaleFactorX = dim.getWidth() / canvasWidth;
 
 				// Pad the viewport a little because having ints for our viewport dimensions can introduce off-by-one errors.
 				final int padding = 1;
 
 				// Ceil the sizes because even if the size is 599.1 we want to treat it as size 600 (i.e. render to the x=599 pixel).
 				renderViewportHeight = (int) Math.ceil(scaleFactorY * (renderViewportHeight)) + padding * 2;
-				renderViewportWidth  = (int) Math.ceil(scaleFactorX * (renderViewportWidth )) + padding * 2;
+				renderViewportWidth = (int) Math.ceil(scaleFactorX * (renderViewportWidth)) + padding * 2;
 
 				// Floor the offsets because even if the offset is 4.9, we want to render to the x=4 pixel anyway.
-				renderHeightOff      = (int) Math.floor(scaleFactorY * (renderHeightOff)) - padding;
-				renderWidthOff       = (int) Math.floor(scaleFactorX * (renderWidthOff )) - padding;
+				renderHeightOff = (int) Math.floor(scaleFactorY * (renderHeightOff)) - padding;
+				renderWidthOff = (int) Math.floor(scaleFactorX * (renderWidthOff)) - padding;
 			}
 
 			glDpiAwareViewport(renderWidthOff, renderCanvasHeight - renderViewportHeight - renderHeightOff, renderViewportWidth, renderViewportHeight);
@@ -1251,7 +1251,7 @@ public class GpuPlugin extends Plugin implements DrawCallbacks
 				{
 					gl.glMemoryBarrier(gl.GL_SHADER_STORAGE_BARRIER_BIT);
 				}
-				
+
 				// Draw using the output buffer of the compute
 				vertexBuffer = tmpOutBufferId;
 				uvBuffer = tmpOutUvBufferId;
@@ -1313,12 +1313,12 @@ public class GpuPlugin extends Plugin implements DrawCallbacks
 	private float[] makeProjectionMatrix(float w, float h, float n)
 	{
 		return new float[]
-		{
-			2 / w, 0, 0, 0,
-			0, 2 / h, 0, 0,
-			0, 0, -1, -1,
-			0, 0, -2 * n, 0
-		};
+			{
+				2 / w, 0, 0, 0,
+				0, 2 / h, 0, 0,
+				0, 0, -1, -1,
+				0, 0, -2 * n, 0
+			};
 	}
 
 	private void drawUi(final int overlayColor, final int canvasHeight, final int canvasWidth)
@@ -1400,13 +1400,13 @@ public class GpuPlugin extends Plugin implements DrawCallbacks
 	 */
 	private Image screenshot()
 	{
-		int width  = client.getCanvasWidth();
+		int width = client.getCanvasWidth();
 		int height = client.getCanvasHeight();
 
 		if (client.isStretchedEnabled())
 		{
 			Dimension dim = client.getStretchedDimensions();
-			width  = dim.width;
+			width = dim.width;
 			height = dim.height;
 		}
 
@@ -1709,7 +1709,7 @@ public class GpuPlugin extends Plugin implements DrawCallbacks
 //			return modelBufferUnordered;
 //		}
 //		else 
-			if (triangles <= SMALL_TRIANGLE_COUNT)
+		if (triangles <= SMALL_TRIANGLE_COUNT)
 		{
 			++smallModels;
 			return modelBufferSmall;
