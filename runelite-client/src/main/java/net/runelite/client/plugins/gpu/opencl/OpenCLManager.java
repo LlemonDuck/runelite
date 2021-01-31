@@ -4,8 +4,6 @@ import com.jogamp.nativewindow.NativeSurface;
 import com.jogamp.opengl.GL4;
 import com.jogamp.opengl.GLContext;
 import java.nio.ByteBuffer;
-import java.nio.FloatBuffer;
-import java.nio.IntBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Objects;
@@ -17,7 +15,6 @@ import jogamp.opengl.egl.EGLContext;
 import jogamp.opengl.macosx.cgl.CGL;
 import jogamp.opengl.windows.wgl.WindowsWGLContext;
 import jogamp.opengl.x11.glx.X11GLXContext;
-import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.client.plugins.gpu.template.Template;
 import net.runelite.client.util.OSType;
@@ -41,21 +38,16 @@ import static org.jocl.CL.*;
 public class OpenCLManager
 {
 
-	private static final long WORK_ITEMS_PER_WORK_GROUP = 6;
 	private static final String GL_SHARING_PLATFORM_EXT = "cl_khr_gl_sharing";
 	private static final String MACOS_GL_SHARING_PLATFORM_EXT = "cl_APPLE_gl_sharing";
 
-	private static final Template BASE_TEMPLATE =
-		new Template().addInclude(OpenCLManager.class);
+	private static final long MIN_WORK_GROUP_SIZE = 512;
+	private static int LARGE_FACE_COUNT;
+	private static Template BASE_TEMPLATE; 
 
-	private static final String SOURCE_COMPUTE_UNORDERED =
-		BASE_TEMPLATE.load("comp_unordered.cl");
-
-	private static final String SOURCE_COMPUTE_SMALL =
-		BASE_TEMPLATE.load("comp_small.cl");
-
-	private static final String SOURCE_COMPUTE_LARGE =
-		BASE_TEMPLATE.load("comp_large.cl");
+	private static String SOURCE_COMPUTE_UNORDERED;
+	private static String SOURCE_COMPUTE_SMALL; 
+	private static String SOURCE_COMPUTE_LARGE;
 
 	private final int[] err = new int[1];
 
@@ -105,6 +97,7 @@ public class OpenCLManager
 			default:
 				throw new OpenCLException("Unsupported OS Type " + OSType.getOSType().name());
 		}
+		ensureMinWorkGroupSize();
 		initQueue();
 		compilePrograms();
 	}
@@ -136,6 +129,9 @@ public class OpenCLManager
 		tmpModelBufferSmallCL = null;
 
 		Optional.ofNullable(tmpModelBufferUnorderedCL).ifPresent(CL::clReleaseMemObject);
+		tmpModelBufferUnorderedCL = null;
+
+		Optional.ofNullable(uniformBufferCL).ifPresent(CL::clReleaseMemObject);
 		tmpModelBufferUnorderedCL = null;
 
 		Optional.ofNullable(programUnordered).ifPresent(CL::clReleaseProgram);
@@ -348,6 +344,27 @@ public class OpenCLManager
 
 		log.debug("Got macOS CLGL compute device {}", device);
 	}
+	
+	private static int pow2LessThan(int n)
+	{
+		int power = (int) Math.log(n);
+		return (int) Math.pow(2, power);
+	}
+	
+	private void ensureMinWorkGroupSize() throws OpenCLException
+	{
+		long[] maxWorkGroupSize = new long[1];
+		clGetDeviceInfo(device, CL_DEVICE_MAX_WORK_GROUP_SIZE, Sizeof.size_t, Pointer.to(maxWorkGroupSize), null);
+		log.debug("DEVICE CL_DEVICE_MAX_WORK_GROUP_SIZE: {}", maxWorkGroupSize[0]);
+		
+		if (maxWorkGroupSize[0] < MIN_WORK_GROUP_SIZE)
+		{
+			throw new OpenCLException("Compute device does not support min work group size " + MIN_WORK_GROUP_SIZE);
+		}
+
+		int largestPow2LessThanMaxGroupSize = (int) Math.pow(2, Math.log(maxWorkGroupSize[0]) / Math.log(2));
+		LARGE_FACE_COUNT = 4096 / (Math.min(largestPow2LessThanMaxGroupSize, 4096));
+	}
 
 	private void initQueue() throws OpenCLException
 	{
@@ -413,6 +430,14 @@ public class OpenCLManager
 
 	private void compilePrograms() throws OpenCLException
 	{
+		BASE_TEMPLATE = new Template()
+			.addInclude(OpenCLManager.class)
+			.add(key -> key.equals("FACE_COUNT") ? ("#define FACE_COUNT " + LARGE_FACE_COUNT) : null);
+		
+		SOURCE_COMPUTE_UNORDERED = BASE_TEMPLATE.load("comp_unordered.cl");
+		SOURCE_COMPUTE_SMALL = BASE_TEMPLATE.load("comp_small.cl");
+		SOURCE_COMPUTE_LARGE = BASE_TEMPLATE.load("comp_large.cl");
+		
 		programUnordered = compileProgram(SOURCE_COMPUTE_UNORDERED);
 		programSmall = compileProgram(SOURCE_COMPUTE_SMALL);
 		programLarge = compileProgram(SOURCE_COMPUTE_LARGE);
@@ -522,7 +547,7 @@ public class OpenCLManager
 
 		// queue compute call after acquireGLBuffers
 		cl_event computeUnordered = new cl_event();
-		err[0] = clEnqueueNDRangeKernel(commandQueue, kernelUnordered, 1, null, new long[] { unorderedModels * WORK_ITEMS_PER_WORK_GROUP }, new long[] { WORK_ITEMS_PER_WORK_GROUP }, 1, new cl_event[]{acquireGLBuffers}, computeUnordered);
+		err[0] = clEnqueueNDRangeKernel(commandQueue, kernelUnordered, 1, null, new long[] {unorderedModels * 6L}, new long[] {6}, 1, new cl_event[]{acquireGLBuffers}, computeUnordered);
 		checkErr("Could not enqueue compute order");
 		
 		clSetKernelArg(kernelSmall, 0, (12 + 12 + 18 + 1 + 512) * 4, null);
@@ -536,7 +561,7 @@ public class OpenCLManager
 		clSetKernelArg(kernelSmall, 8, Sizeof.cl_mem, Pointer.to(uniformBufferCL));
 		
 		cl_event computeSmall = new cl_event();
-		err[0] = clEnqueueNDRangeKernel(commandQueue, kernelSmall, 1, null, new long[] {smallModels * 512L}, new long[] {512}, 1, new cl_event[]{computeUnordered}, computeSmall);
+		err[0] = clEnqueueNDRangeKernel(commandQueue, kernelSmall, 1, null, new long[] {smallModels * 512L}, new long[] {512}, 1, new cl_event[]{acquireGLBuffers}, computeSmall);
 		checkErr("Could not enqueue small compute order");
 		
 		clSetKernelArg(kernelLarge, 0, (12 + 12 + 18 + 1 + 4096) * 4, null);
@@ -550,11 +575,11 @@ public class OpenCLManager
 		clSetKernelArg(kernelLarge, 8, Sizeof.cl_mem, Pointer.to(uniformBufferCL));
 		
 		cl_event computeLarge = new cl_event();
-		err[0] = clEnqueueNDRangeKernel(commandQueue, kernelLarge, 1, null, new long[] {largeModels * 1024L}, new long[] {1024}, 1, new cl_event[]{computeSmall}, computeLarge);
+		err[0] = clEnqueueNDRangeKernel(commandQueue, kernelLarge, 1, null, new long[] {largeModels * 1024L}, new long[] {1024}, 1, new cl_event[]{acquireGLBuffers}, computeLarge);
 		checkErr("Could not enqueue large compute order");
 
 		// queue release call after compute
-		clEnqueueReleaseGLObjects(commandQueue, glBuffers.length, glBuffers, 1, new cl_event[]{computeLarge}, null);
+		clEnqueueReleaseGLObjects(commandQueue, glBuffers.length, glBuffers, 3, new cl_event[]{computeUnordered, computeSmall, computeLarge}, null);
 
 		err[0] = clFinish(commandQueue);
 		checkErr("Could not synchronize with end of CL compute call");

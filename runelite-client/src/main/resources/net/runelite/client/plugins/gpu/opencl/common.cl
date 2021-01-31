@@ -52,7 +52,7 @@ float4 toScreen(int4 vertex, int cameraYaw, int cameraPitch, int centerX, int ce
  * Rotate a vertex by a given orientation in JAU
  */
 int4 rotateCustom(__global const struct uniform *uni, int4 vertex, int orientation) {
-	int2 sinCos = uni->sinCosTable[orientation];
+	int2 sinCos = uni->sinCosTable[2 * orientation]; // no fkn clue why 2* is needed hereig i
 	int s = sinCos.x;
 	int c = sinCos.y;
 	int x = ((vertex.z * s) + (vertex.x * c)) >> 16;

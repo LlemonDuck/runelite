@@ -60,20 +60,20 @@ void computeSmall(__local struct shared_data *shared,
 
   get_face(shared, uni, vb, tempvb, localId, minfo, uni->cameraYaw, uni->cameraPitch, &prio1, &dis1, &vA1, &vA2, &vA3);
 
-  barrier(CLK_LOCAL_MEM_FENCE);
+  barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
 
   add_face_prio_distance(shared, uni, localId, minfo, vA1, vA2, vA3, prio1, dis1, pos);
 
-  barrier(CLK_LOCAL_MEM_FENCE);
+  barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
 
   int prio1Adj;
   int idx1 = map_face_priority(shared, localId, minfo, prio1, dis1, &prio1Adj);
 
-  barrier(CLK_LOCAL_MEM_FENCE);
+  barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
 
   insert_dfs(shared, localId, minfo, prio1Adj, dis1, idx1);
 
-  barrier(CLK_LOCAL_MEM_FENCE);
+  barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
 
   sort_and_insert(shared, uv, tempuv, vout, uvout, localId, minfo, prio1Adj, dis1, vA1, vA2, vA3);
 }
