@@ -341,12 +341,6 @@ public class OpenCLManager
 		log.debug("Got macOS CLGL compute device {}", device);
 	}
 	
-	private static int pow2LessThan(int n)
-	{
-		int power = (int) Math.log(n);
-		return (int) Math.pow(2, power);
-	}
-	
 	private void ensureMinWorkGroupSize() throws OpenCLException
 	{
 		long[] maxWorkGroupSize = new long[1];
