@@ -868,31 +868,38 @@ public class GpuPlugin extends Plugin implements DrawCallbacks
 		IntBuffer modelBufferSmall = this.modelBufferSmall.getBuffer();
 		IntBuffer modelBufferUnordered = this.modelBufferUnordered.getBuffer();
 
+		long tmpBufferS = (long) vertexBuffer.limit() * Integer.BYTES;
 		gl.glBindBuffer(gl.GL_ARRAY_BUFFER, tmpBufferId);
-		gl.glBufferData(gl.GL_ARRAY_BUFFER, vertexBuffer.limit() * Integer.BYTES, vertexBuffer, gl.GL_DYNAMIC_DRAW);
+		gl.glBufferData(gl.GL_ARRAY_BUFFER, tmpBufferS, vertexBuffer, gl.GL_DYNAMIC_DRAW);
 
+		long tmpUvS = (long) uvBuffer.limit() * Float.BYTES;
 		gl.glBindBuffer(gl.GL_ARRAY_BUFFER, tmpUvBufferId);
-		gl.glBufferData(gl.GL_ARRAY_BUFFER, uvBuffer.limit() * Float.BYTES, uvBuffer, gl.GL_DYNAMIC_DRAW);
+		gl.glBufferData(gl.GL_ARRAY_BUFFER, tmpUvS, uvBuffer, gl.GL_DYNAMIC_DRAW);
 
+		long tmpModelLargeS = (long) modelBuffer.limit() * Integer.BYTES;
 		gl.glBindBuffer(gl.GL_ARRAY_BUFFER, tmpModelBufferId);
-		gl.glBufferData(gl.GL_ARRAY_BUFFER, modelBuffer.limit() * Integer.BYTES, modelBuffer, gl.GL_DYNAMIC_DRAW);
+		gl.glBufferData(gl.GL_ARRAY_BUFFER, tmpModelLargeS, modelBuffer, gl.GL_DYNAMIC_DRAW);
 
+		long tmpModelSmallS = (long) modelBufferSmall.limit() * Integer.BYTES;
 		gl.glBindBuffer(gl.GL_ARRAY_BUFFER, tmpModelBufferSmallId);
-		gl.glBufferData(gl.GL_ARRAY_BUFFER, modelBufferSmall.limit() * Integer.BYTES, modelBufferSmall, gl.GL_DYNAMIC_DRAW);
+		gl.glBufferData(gl.GL_ARRAY_BUFFER, tmpModelSmallS, modelBufferSmall, gl.GL_DYNAMIC_DRAW);
 
+		long tmpModelUnorderedS = (long) modelBufferUnordered.limit() * Integer.BYTES;
 		gl.glBindBuffer(gl.GL_ARRAY_BUFFER, tmpModelBufferUnorderedId);
-		gl.glBufferData(gl.GL_ARRAY_BUFFER, modelBufferUnordered.limit() * Integer.BYTES, modelBufferUnordered, gl.GL_DYNAMIC_DRAW);
+		gl.glBufferData(gl.GL_ARRAY_BUFFER, tmpModelUnorderedS, modelBufferUnordered, gl.GL_DYNAMIC_DRAW);
 
 		// Output buffers
+		long tmpOutS = targetBufferOffset * 16L;
 		gl.glBindBuffer(gl.GL_ARRAY_BUFFER, tmpOutBufferId);
 		gl.glBufferData(gl.GL_ARRAY_BUFFER,
-			targetBufferOffset * 16, // each vertex is an ivec4, which is 16 bytes
+			tmpOutS, // each vertex is an ivec4, which is 16 bytes
 			null,
 			gl.GL_STREAM_DRAW);
 
+		long tmpUvOutS = targetBufferOffset * 16L;
 		gl.glBindBuffer(gl.GL_ARRAY_BUFFER, tmpOutUvBufferId);
 		gl.glBufferData(gl.GL_ARRAY_BUFFER,
-			targetBufferOffset * 16,
+			tmpUvOutS,
 			null,
 			gl.GL_STREAM_DRAW);
 
@@ -911,7 +918,7 @@ public class GpuPlugin extends Plugin implements DrawCallbacks
 			{
 				// need to sync here before swapping contexts to opencl
 				gl.glFinish();
-				openCLManager.copyGLBuffers(tmpBufferId, tmpUvBufferId, tmpModelBufferId, tmpModelBufferSmallId, tmpModelBufferUnorderedId, tmpOutBufferId, tmpOutUvBufferId);
+				openCLManager.copyGLBuffers(tmpBufferId, tmpBufferS, tmpUvBufferId, tmpUvS, tmpModelBufferId, tmpModelLargeS, tmpModelBufferSmallId, tmpModelSmallS, tmpModelBufferUnorderedId, tmpModelUnorderedS, tmpOutBufferId, tmpOutS, tmpOutUvBufferId, tmpUvOutS);
 				openCLManager.computeUnordered(unorderedModels, smallModels, largeModels);
 			}
 			catch (OpenCLException e)
