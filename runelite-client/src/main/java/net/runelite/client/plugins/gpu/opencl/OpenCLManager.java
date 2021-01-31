@@ -105,12 +105,6 @@ public class OpenCLManager
 	private int activeComputeLocks = 0;
 	private cl_event[] computeLocks = new cl_event[4];
 
-	@Getter
-	private IntBuffer vertexBufferOut;
-
-	@Getter
-	private FloatBuffer uvBufferOut;
-
 	private static final String KERNEL_NAME_UNORDERED = "computeUnordered";
 	private static final String KERNEL_NAME_VARIABLE = "main";
 
@@ -135,6 +129,8 @@ public class OpenCLManager
 
 	public void cleanup()
 	{
+		Optional.ofNullable(commandQueue).ifPresent(CL::clFinish);
+		
 		Optional.ofNullable(vertexBufferCL).ifPresent(CL::clReleaseMemObject);
 		vertexBufferCL = null;
 
@@ -161,6 +157,9 @@ public class OpenCLManager
 
 		Optional.ofNullable(tmpModelBufferUnorderedCL).ifPresent(CL::clReleaseMemObject);
 		tmpModelBufferUnorderedCL = null;
+		
+		Optional.ofNullable(uniformBufferCL).ifPresent(CL::clReleaseMemObject);
+		uniformBufferCL = null;
 
 		Optional.ofNullable(programUnordered).ifPresent(CL::clReleaseProgram);
 		programUnordered = null;
@@ -170,6 +169,12 @@ public class OpenCLManager
 
 		Optional.ofNullable(commandQueue).ifPresent(CL::clReleaseCommandQueue);
 		commandQueue = null;
+
+		Optional.ofNullable(kernelUnordered).ifPresent(CL::clReleaseKernel);
+		kernelUnordered = null;
+
+		Optional.ofNullable(kernelVariable).ifPresent(CL::clReleaseKernel);
+		kernelVariable = null;
 
 		Optional.ofNullable(context).ifPresent(CL::clReleaseContext);
 		context = null;
@@ -514,7 +519,8 @@ public class OpenCLManager
 	{
 		for (int i = 0; i < argPointers.length; i++)
 		{
-			clSetKernelArg(kernel, base + i, Sizeof.cl_mem, Pointer.to(argPointers[i]));
+			err[0] = clSetKernelArg(kernel, base + i, Sizeof.cl_mem, Pointer.to(argPointers[i]));
+			checkErr("Couldn't set kernel argument " + (base + i) + " for kernel " + kernel);
 		}
 	}
 
@@ -524,15 +530,15 @@ public class OpenCLManager
 		{
 			return;
 		}
-		
-		// lock shared buffers
-		ensureSharedBuffersLocked();
-		
+
 		// lock unordered-specific buffer
 		Optional.ofNullable(tmpModelBufferUnorderedCL).ifPresent(CL::clReleaseMemObject);
 		tmpModelBufferUnorderedCL = null; // null-set in case of error locking
 		tmpModelBufferUnorderedCL = clCreateFromGLBuffer(context, CL_MEM_READ_ONLY, modelBufferUnordered, err);
 		checkErr("Could not copy modelBufferUnordered");
+		
+		// lock shared buffers
+		ensureSharedBuffersLocked();
 		
 		cl_event lockU = new cl_event();
 		err[0] = clEnqueueAcquireGLObjects(commandQueue, 1, new cl_mem[]{tmpModelBufferUnorderedCL}, 0, null, lockU);
@@ -644,6 +650,7 @@ public class OpenCLManager
 		// each compute call should release its own model buffer
 		releaseSharedGLMemoryLocks();
 		activeComputeLocks = 0;
+		eventLockSharedBuffers = null;
 
 		err[0] = clFinish(commandQueue);
 		checkErr("Could not synchronize with end of CL compute call");
