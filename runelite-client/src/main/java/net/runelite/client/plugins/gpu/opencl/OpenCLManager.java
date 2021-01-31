@@ -52,7 +52,7 @@ public class OpenCLManager
 	private static final String MACOS_GL_SHARING_PLATFORM_EXT = "cl_APPLE_gl_sharing";
 
 	private static final Template BASE_TEMPLATE =
-		new Template().addInclude(GpuPlugin.class);
+		new Template().addInclude(OpenCLManager.class);
 
 	static
 	{
@@ -67,7 +67,7 @@ public class OpenCLManager
 	}
 
 	private static final String SOURCE_COMPUTE_UNORDERED =
-		BASE_TEMPLATE.load("comp_unordered.glsl");
+		BASE_TEMPLATE.load("comp_unordered.cl");
 	
 	private static final String SOURCE_COMPUTE_VARIABLE =
 		BASE_TEMPLATE.load("comp_var.cl");
@@ -111,7 +111,7 @@ public class OpenCLManager
 	@Getter
 	private FloatBuffer uvBufferOut;
 
-	private static final String KERNEL_NAME_UNORDERED = "main";
+	private static final String KERNEL_NAME_UNORDERED = "computeUnordered";
 	private static final String KERNEL_NAME_VARIABLE = "main";
 
 	public void init(GL4 gl) throws OpenCLException
@@ -423,10 +423,10 @@ public class OpenCLManager
 	private void compilePrograms() throws OpenCLException
 	{
 		programUnordered = compileProgram(SOURCE_COMPUTE_UNORDERED);
-		programVariable = compileProgram(SOURCE_COMPUTE_VARIABLE);
+//		programVariable = compileProgram(SOURCE_COMPUTE_VARIABLE);
 
 		kernelUnordered = getKernel(programUnordered, KERNEL_NAME_UNORDERED);
-		kernelVariable = getKernel(programVariable, KERNEL_NAME_VARIABLE);
+//		kernelVariable = getKernel(programVariable, KERNEL_NAME_VARIABLE);
 	}
 	
 	public void copyUniformBuffer(int uniformBuffer) throws OpenCLException
@@ -477,7 +477,7 @@ public class OpenCLManager
 		checkErr("Couldn't copy tmpUvBuffer");
 
 		tmpOutBufferCL = clCreateFromGLBuffer(context, CL_MEM_READ_WRITE, tmpOutBuffer, err);
-		checkErr("Couldn't copy tmpModelBufferUnordered");
+		checkErr("Couldn't copy tmpOutBuffer");
 
 		tmpOutUvBufferCL = clCreateFromGLBuffer(context, CL_MEM_READ_WRITE, tmpOutUvBuffer, err);
 		checkErr("Couldn't copy tmpOutUvBuffer");
@@ -497,7 +497,7 @@ public class OpenCLManager
 			tmpUvBufferCL,
 			tmpOutBufferCL,
 			tmpOutUvBufferCL,
-			uniformBufferCL,
+//			uniformBufferCL,
 		};
 		if (Arrays.stream(lockedGLMemoryBuffers).anyMatch(Objects::isNull))
 		{
@@ -542,7 +542,7 @@ public class OpenCLManager
 		cl_event compute = new cl_event();
 		try
 		{
-			setArgs(kernelUnordered, 0, tmpModelBufferUnorderedCL, vertexBufferCL, tmpVertexBufferCL, tmpOutBufferCL, tmpOutUvBufferCL, uvBufferCL, tmpUvBufferCL, uniformBufferCL);
+			setArgs(kernelUnordered, 0, tmpModelBufferUnorderedCL, vertexBufferCL, tmpVertexBufferCL, tmpOutBufferCL, tmpOutUvBufferCL, uvBufferCL, tmpUvBufferCL);
 			err[0] = clEnqueueNDRangeKernel(commandQueue, kernelUnordered, 1, null, new long[]{unorderedCount * FACES_PER_ITEM_UNORDERED}, new long[]{FACES_PER_ITEM_UNORDERED}, 2, new cl_event[]{eventLockSharedBuffers, lockU}, compute);
 			checkErr("Could not enqueue compute order unordered");
 			computeLocks[activeComputeLocks++] = compute;

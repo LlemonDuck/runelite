@@ -1713,12 +1713,12 @@ public class GpuPlugin extends Plugin implements DrawCallbacks
 	 */
 	private GpuIntBuffer bufferForTriangles(int triangles)
 	{
-//		if (useCL)
-//		{
-//			++unorderedModels;
-//			return modelBufferUnordered;
-//		}
-//		else
+		if (useCL)
+		{
+			++unorderedModels;
+			return modelBufferUnordered;
+		}
+		else
 			if (triangles <= SMALL_TRIANGLE_COUNT)
 		{
 			++smallModels;
