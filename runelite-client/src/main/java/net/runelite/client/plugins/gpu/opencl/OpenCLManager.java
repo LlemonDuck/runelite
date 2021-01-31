@@ -338,10 +338,6 @@ public class OpenCLManager
 		clGetGLContextInfoAPPLE(context, cglContext, CL_CGL_DEVICE_FOR_CURRENT_VIRTUAL_SCREEN_APPLE, Sizeof.cl_device_id, Pointer.to(device), null);
 		checkErr("Could not get device from CLGL context");
 		
-		long[] maxWorkSize = new long[1];
-		clGetDeviceInfo(device, CL_DEVICE_MAX_WORK_GROUP_SIZE, Sizeof.size_t, Pointer.to(maxWorkSize), null);
-		log.debug("DEVICE CL_DEVICE_MAX_WORK_GROUP_SIZE: {}", maxWorkSize[0]);
-
 		log.debug("Got macOS CLGL compute device {}", device);
 	}
 	
