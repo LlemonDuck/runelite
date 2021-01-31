@@ -916,12 +916,24 @@ public class GpuPlugin extends Plugin implements DrawCallbacks
 				// need to sync here before swapping contexts to opencl
 				gl.glFinish();
 				openCLManager.copyGLBuffers(tmpBufferId, tmpUvBufferId, tmpOutBufferId, tmpOutUvBufferId);
-				openCLManager.copyModelBuffers(largeModels, tmpModelBufferId, smallModels, tmpModelBufferSmallId, unorderedModels, tmpModelBufferUnorderedId);
-				openCLManager.computeAll(unorderedModels, smallModels, largeModels);
+				openCLManager.pushComputeUnordered(unorderedModels, tmpModelBufferUnorderedId);
+				openCLManager.pushComputeSmall(smallModels, tmpModelBufferSmallId);
+				openCLManager.pushComputeLarge(largeModels, tmpModelBufferId);
 			}
 			catch (OpenCLException e)
 			{
 				e.printStackTrace();
+			}
+			finally
+			{
+				try
+				{
+					openCLManager.finish();
+				}
+				catch (OpenCLException e)
+				{
+					e.printStackTrace();
+				}
 			}
 
 			return;
