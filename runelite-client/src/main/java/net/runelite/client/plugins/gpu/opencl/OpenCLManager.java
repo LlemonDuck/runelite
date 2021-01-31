@@ -565,7 +565,7 @@ public class OpenCLManager
 		clSetKernelArg(kernelLarge, 8, Sizeof.cl_mem, Pointer.to(uniformBufferCL));
 		
 		cl_event computeLarge = new cl_event();
-		err[0] = clEnqueueNDRangeKernel(commandQueue, kernelLarge, 1, null, new long[] {largeModels * 1024L}, new long[] {1024}, 1, new cl_event[]{acquireGLBuffers}, computeLarge);
+		err[0] = clEnqueueNDRangeKernel(commandQueue, kernelLarge, 1, null, new long[] {(long) largeModels * (4096 / LARGE_FACE_COUNT)}, new long[] {4096 / LARGE_FACE_COUNT}, 1, new cl_event[]{acquireGLBuffers}, computeLarge);
 		checkErr("Could not enqueue large compute order");
 
 		// queue release call after compute
