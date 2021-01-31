@@ -203,6 +203,10 @@ public class OpenCLManager
 			case CL_PROGRAM_BINARY_TYPE:
 				log.debug("COMPILE: {}, {}", stringFor_cl_program_build_info(param), stringFor_cl_program_binary_type(buffer.getInt()));
 				break;
+			case CL_PROGRAM_BUILD_LOG:
+				String buildLog = StandardCharsets.US_ASCII.decode(buffer).toString();
+				log.trace("COMPILE: {}, {}", stringFor_cl_program_build_info(param), buildLog);
+				break;
 			default:
 				String message = StandardCharsets.US_ASCII.decode(buffer).toString();
 				log.debug("COMPILE: {}, {}", stringFor_cl_program_build_info(param), message);
@@ -337,6 +341,10 @@ public class OpenCLManager
 		device = new cl_device_id();
 		clGetGLContextInfoAPPLE(context, cglContext, CL_CGL_DEVICE_FOR_CURRENT_VIRTUAL_SCREEN_APPLE, Sizeof.cl_device_id, Pointer.to(device), null);
 		checkErr("Could not get device from CLGL context");
+		
+		long[] maxWorkSize = new long[1];
+		clGetDeviceInfo(device, CL_DEVICE_MAX_WORK_GROUP_SIZE, Sizeof.size_t, Pointer.to(maxWorkSize), null);
+		log.debug("DEVICE CL_DEVICE_MAX_WORK_GROUP_SIZE: {}", maxWorkSize[0]);
 
 		log.debug("Got macOS CLGL compute device {}", device);
 	}
@@ -547,7 +555,7 @@ public class OpenCLManager
 		
 		cl_event computeLarge = new cl_event();
 		err[0] = clEnqueueNDRangeKernel(commandQueue, kernelLarge, 1, null, new long[] {largeModels * 1024L}, new long[] {1024}, 1, new cl_event[]{computeSmall}, computeLarge);
-		checkErr("Could not enqueue small compute order");
+		checkErr("Could not enqueue large compute order");
 		err[0] = clFinish(commandQueue);
 		checkErr("Could not synchronize with end of CL compute call");
 
