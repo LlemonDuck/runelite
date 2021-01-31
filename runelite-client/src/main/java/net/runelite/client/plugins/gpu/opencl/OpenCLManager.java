@@ -51,6 +51,12 @@ public class OpenCLManager
 	private static final String SOURCE_COMPUTE_UNORDERED =
 		BASE_TEMPLATE.load("comp_unordered.cl");
 
+	private static final String SOURCE_COMPUTE_SMALL =
+		BASE_TEMPLATE.load("comp_small.cl");
+
+	private static final String SOURCE_COMPUTE_LARGE =
+		BASE_TEMPLATE.load("comp_large.cl");
+
 	private final int[] err = new int[1];
 
 	private cl_platform_id platform;
@@ -65,6 +71,8 @@ public class OpenCLManager
 	private cl_kernel kernelUnordered;
 	private cl_kernel kernelSmall;
 	private cl_kernel kernelLarge;
+	
+	private cl_mem uniformBufferCL;
 
 	private cl_mem vertexBufferCL;
 	private cl_mem uvBufferCL;
@@ -77,12 +85,6 @@ public class OpenCLManager
 	private cl_mem tmpModelBufferCL; // scene model buffer, large
 	private cl_mem tmpModelBufferSmallCL; // scene model buffer, small
 	private cl_mem tmpModelBufferUnorderedCL;
-
-	@Getter
-	private IntBuffer vertexBufferOut;
-
-	@Getter
-	private FloatBuffer uvBufferOut;
 
 	private static final String KERNEL_NAME_UNORDERED = "computeUnordered";
 	private static final String KERNEL_NAME_SMALL = "computeSmall";
@@ -143,6 +145,15 @@ public class OpenCLManager
 		programSmall = null;
 
 		Optional.ofNullable(programLarge).ifPresent(CL::clReleaseProgram);
+		programLarge = null;
+
+		Optional.ofNullable(kernelUnordered).ifPresent(CL::clReleaseKernel);
+		programUnordered = null;
+
+		Optional.ofNullable(kernelSmall).ifPresent(CL::clReleaseKernel);
+		programSmall = null;
+
+		Optional.ofNullable(kernelLarge).ifPresent(CL::clReleaseKernel);
 		programLarge = null;
 
 		Optional.ofNullable(commandQueue).ifPresent(CL::clReleaseCommandQueue);
@@ -395,12 +406,19 @@ public class OpenCLManager
 	private void compilePrograms() throws OpenCLException
 	{
 		programUnordered = compileProgram(SOURCE_COMPUTE_UNORDERED);
-//		compileProgram("comp_small.cl");
-//		compileProgram("comp_large.cl");
+		programSmall = compileProgram(SOURCE_COMPUTE_SMALL);
+		programLarge = compileProgram(SOURCE_COMPUTE_LARGE);
 
-		kernelUnordered = getKernel(programUnordered, "computeUnordered");
-//		kernelSmall = getKernel(programSmall, "computeSmall");
-//		kernelLarge = getKernel(programLarge, "computeLarge");
+		kernelUnordered = getKernel(programUnordered, KERNEL_NAME_UNORDERED);
+		kernelSmall = getKernel(programSmall, KERNEL_NAME_SMALL);
+		kernelLarge = getKernel(programLarge, KERNEL_NAME_LARGE);
+	}
+	
+	public void copyUniformBuffer(int uniformBuffer) throws OpenCLException
+	{
+		Optional.ofNullable(uniformBufferCL).ifPresent(CL::clReleaseMemObject);
+		uniformBufferCL = clCreateFromGLBuffer(context, CL_MEM_READ_ONLY, uniformBuffer, err);
+		checkErr("Couldn't copy uniform buffer");
 	}
 
 	public void copySceneBuffers(long vBufS, long uvBufS, int vertexBuffer, int uvBuffer) throws OpenCLException
@@ -428,15 +446,15 @@ public class OpenCLManager
 	{
 		Optional.ofNullable(tmpVertexBufferCL).ifPresent(CL::clReleaseMemObject);
 		Optional.ofNullable(tmpUvBufferCL).ifPresent(CL::clReleaseMemObject);
-//		Optional.ofNullable(tmpModelBufferCL).ifPresent(CL::clReleaseMemObject);
-//		Optional.ofNullable(tmpModelBufferSmallCL).ifPresent(CL::clReleaseMemObject);
+		Optional.ofNullable(tmpModelBufferCL).ifPresent(CL::clReleaseMemObject);
+		Optional.ofNullable(tmpModelBufferSmallCL).ifPresent(CL::clReleaseMemObject);
 		Optional.ofNullable(tmpModelBufferUnorderedCL).ifPresent(CL::clReleaseMemObject);
 		Optional.ofNullable(tmpOutBufferCL).ifPresent(CL::clReleaseMemObject);
 		Optional.ofNullable(tmpOutUvBufferCL).ifPresent(CL::clReleaseMemObject);
 		tmpVertexBufferCL = null;
 		tmpUvBufferCL = null;
-//		tmpModelBufferCL = null;
-//		tmpModelBufferSmallCL = null;
+		tmpModelBufferCL = null;
+		tmpModelBufferSmallCL = null;
 		tmpModelBufferUnorderedCL = null;
 		tmpOutBufferCL = null;
 		tmpOutUvBufferCL = null;
@@ -447,11 +465,11 @@ public class OpenCLManager
 		tmpUvBufferCL = clCreateFromGLBuffer(context, CL_MEM_READ_ONLY, tmpUvBuffer, err);
 		checkErr("Couldn't copy tmpUvBuffer");
 
-//		tmpModelBufferCL = clCreateFromGLBuffer(context, CL_MEM_READ_ONLY, tmpModelBuffer, err);
-//		checkErr("Couldn't copy tmpModelBuffer");
+		tmpModelBufferCL = clCreateFromGLBuffer(context, CL_MEM_READ_ONLY, tmpModelBuffer, err);
+		checkErr("Couldn't copy tmpModelBuffer");
 
-//		tmpModelBufferSmallCL = clCreateFromGLBuffer(context, CL_MEM_READ_ONLY, tmpModelBufferSmall, err);
-//		checkErr("Couldn't copy tmpModelBufferSmall");
+		tmpModelBufferSmallCL = clCreateFromGLBuffer(context, CL_MEM_READ_ONLY, tmpModelBufferSmall, err);
+		checkErr("Couldn't copy tmpModelBufferSmall");
 
 		tmpModelBufferUnorderedCL = clCreateFromGLBuffer(context, CL_MEM_READ_ONLY, tmpModelBufferUnordered, err);
 		checkErr("Couldn't copy tmpModelBufferUnordered");
@@ -463,16 +481,19 @@ public class OpenCLManager
 		checkErr("Couldn't copy tmpOutUvBuffer");
 	}
 
-	public void computeUnordered(int unorderedModels) throws OpenCLException
+	public void computeUnordered(int unorderedModels, int smallModels, int largeModels) throws OpenCLException
 	{
 		cl_mem[] glBuffers = {
 			tmpModelBufferUnorderedCL,
+			tmpModelBufferSmallCL,
+			tmpModelBufferCL,
 			vertexBufferCL,
 			tmpVertexBufferCL,
 			uvBufferCL,
 			tmpUvBufferCL,
 			tmpOutBufferCL,
 			tmpOutUvBufferCL,
+			uniformBufferCL,
 		};
 		if (Arrays.stream(glBuffers).anyMatch(Objects::isNull))
 		{
@@ -492,12 +513,46 @@ public class OpenCLManager
 		clSetKernelArg(kernelUnordered, 6, Sizeof.cl_mem, Pointer.to(tmpOutUvBufferCL));
 
 		// queue compute call after acquireGLBuffers
-		cl_event compute = new cl_event();
-		err[0] = clEnqueueNDRangeKernel(commandQueue, kernelUnordered, 1, null, new long[] { unorderedModels * WORK_ITEMS_PER_WORK_GROUP }, new long[] { WORK_ITEMS_PER_WORK_GROUP }, 1, new cl_event[]{acquireGLBuffers}, compute);
+		cl_event computeUnordered = new cl_event();
+		err[0] = clEnqueueNDRangeKernel(commandQueue, kernelUnordered, 1, null, new long[] { unorderedModels * WORK_ITEMS_PER_WORK_GROUP }, new long[] { WORK_ITEMS_PER_WORK_GROUP }, 1, new cl_event[]{acquireGLBuffers}, computeUnordered);
 		checkErr("Could not enqueue compute order");
+		err[0] = clFinish(commandQueue);
+		checkErr("Could not synchronize with end of CL compute call");
+		
+		clSetKernelArg(kernelSmall, 0, (12 + 12 + 18 + 1 + 512) * 4, null);
+		clSetKernelArg(kernelSmall, 1, Sizeof.cl_mem, Pointer.to(tmpModelBufferSmallCL));
+		clSetKernelArg(kernelSmall, 2, Sizeof.cl_mem, Pointer.to(vertexBufferCL));
+		clSetKernelArg(kernelSmall, 3, Sizeof.cl_mem, Pointer.to(tmpVertexBufferCL));
+		clSetKernelArg(kernelSmall, 4, Sizeof.cl_mem, Pointer.to(uvBufferCL));
+		clSetKernelArg(kernelSmall, 5, Sizeof.cl_mem, Pointer.to(tmpUvBufferCL));
+		clSetKernelArg(kernelSmall, 6, Sizeof.cl_mem, Pointer.to(tmpOutBufferCL));
+		clSetKernelArg(kernelSmall, 7, Sizeof.cl_mem, Pointer.to(tmpOutUvBufferCL));
+		clSetKernelArg(kernelSmall, 8, Sizeof.cl_mem, Pointer.to(uniformBufferCL));
+		
+		cl_event computeSmall = new cl_event();
+		err[0] = clEnqueueNDRangeKernel(commandQueue, kernelSmall, 1, null, new long[] {smallModels * 512L}, new long[] {512}, 1, new cl_event[]{computeUnordered}, computeSmall);
+		checkErr("Could not enqueue small compute order");
+		err[0] = clFinish(commandQueue);
+		checkErr("Could not synchronize with end of CL compute call");
+		
+		clSetKernelArg(kernelLarge, 0, (12 + 12 + 18 + 1 + 4096) * 4, null);
+		clSetKernelArg(kernelLarge, 1, Sizeof.cl_mem, Pointer.to(tmpModelBufferCL));
+		clSetKernelArg(kernelLarge, 2, Sizeof.cl_mem, Pointer.to(vertexBufferCL));
+		clSetKernelArg(kernelLarge, 3, Sizeof.cl_mem, Pointer.to(tmpVertexBufferCL));
+		clSetKernelArg(kernelLarge, 4, Sizeof.cl_mem, Pointer.to(uvBufferCL));
+		clSetKernelArg(kernelLarge, 5, Sizeof.cl_mem, Pointer.to(tmpUvBufferCL));
+		clSetKernelArg(kernelLarge, 6, Sizeof.cl_mem, Pointer.to(tmpOutBufferCL));
+		clSetKernelArg(kernelLarge, 7, Sizeof.cl_mem, Pointer.to(tmpOutUvBufferCL));
+		clSetKernelArg(kernelLarge, 8, Sizeof.cl_mem, Pointer.to(uniformBufferCL));
+		
+		cl_event computeLarge = new cl_event();
+		err[0] = clEnqueueNDRangeKernel(commandQueue, kernelLarge, 1, null, new long[] {largeModels * 1024L}, new long[] {1024}, 1, new cl_event[]{computeSmall}, computeLarge);
+		checkErr("Could not enqueue small compute order");
+		err[0] = clFinish(commandQueue);
+		checkErr("Could not synchronize with end of CL compute call");
 
 		// queue release call after compute
-		clEnqueueReleaseGLObjects(commandQueue, glBuffers.length, glBuffers, 1, new cl_event[]{compute}, null);
+		clEnqueueReleaseGLObjects(commandQueue, glBuffers.length, glBuffers, 1, new cl_event[]{computeLarge}, null);
 
 		err[0] = clFinish(commandQueue);
 		checkErr("Could not synchronize with end of CL compute call");

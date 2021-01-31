@@ -24,17 +24,17 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include modelinfo.cl
+#include cl_types.cl
 
 __kernel
 __attribute__((reqd_work_group_size(6, 1, 1)))
 void computeUnordered(__global const struct modelinfo *ol,
-                               __global const int4 *vb,
-                               __global const int4 *tempvb,
-                               __global const float4 *uv,
-                               __global const float4 *tempuv,
-                               __global int4 *vout,
-                               __global float4 *uvout) {
+                      __global const int4 *vb,
+                      __global const int4 *tempvb,
+                      __global const float4 *uv,
+                      __global const float4 *tempuv,
+                      __global int4 *vout,
+                      __global float4 *uvout) {
   size_t groupId = get_group_id(0);
   size_t localId = get_local_id(0);
   struct modelinfo minfo = ol[groupId];

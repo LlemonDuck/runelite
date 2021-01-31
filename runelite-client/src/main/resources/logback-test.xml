@@ -6,7 +6,7 @@
 		</encoder>
 	</appender>
 
-	<logger name="net.runelite.client.plugins.gpu.opencl" level="DEBUG" />
+	<logger name="net.runelite.client.plugins.gpu.opencl" level="TRACE" />
 
 	<root level="WARN">
 		<appender-ref ref="STDOUT"/>
