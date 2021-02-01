@@ -43,7 +43,7 @@ public class OpenCLManager
 
 	private static final long MIN_WORK_GROUP_SIZE = 512;
 	private static int LARGE_FACE_COUNT;
-	private static Template BASE_TEMPLATE; 
+	private static int SMALL_FACE_COUNT;
 
 	private static String SOURCE_COMPUTE_UNORDERED;
 	private static String SOURCE_COMPUTE_SMALL; 
@@ -354,6 +354,7 @@ public class OpenCLManager
 
 		int largestPow2LessThanMaxGroupSize = (int) Math.pow(2, Math.log(maxWorkGroupSize[0]) / Math.log(2));
 		LARGE_FACE_COUNT = 4096 / (Math.min(largestPow2LessThanMaxGroupSize, 4096));
+		SMALL_FACE_COUNT = 512 / (Math.min(largestPow2LessThanMaxGroupSize, 512));
 	}
 
 	private void initQueue() throws OpenCLException
@@ -420,20 +421,23 @@ public class OpenCLManager
 
 	private void compilePrograms() throws OpenCLException
 	{
-		BASE_TEMPLATE = new Template()
+		Template templateSmall = new Template()
+			.addInclude(OpenCLManager.class)
+			.add(key -> key.equals("FACE_COUNT") ? ("#define FACE_COUNT " + SMALL_FACE_COUNT) : null);
+		Template templateLarge = new Template()
 			.addInclude(OpenCLManager.class)
 			.add(key -> key.equals("FACE_COUNT") ? ("#define FACE_COUNT " + LARGE_FACE_COUNT) : null);
 		
-		SOURCE_COMPUTE_UNORDERED = BASE_TEMPLATE.load("comp_unordered.cl");
-		SOURCE_COMPUTE_SMALL = BASE_TEMPLATE.load("comp_small.cl");
-		SOURCE_COMPUTE_LARGE = BASE_TEMPLATE.load("comp_large.cl");
+		SOURCE_COMPUTE_UNORDERED = new Template().addInclude(OpenCLManager.class).load("comp_unordered.cl");
+		SOURCE_COMPUTE_SMALL = templateSmall.load("comp_large.cl");
+		SOURCE_COMPUTE_LARGE = templateLarge.load("comp_large.cl");
 		
 		programUnordered = compileProgram(SOURCE_COMPUTE_UNORDERED);
 		programSmall = compileProgram(SOURCE_COMPUTE_SMALL);
 		programLarge = compileProgram(SOURCE_COMPUTE_LARGE);
 
 		kernelUnordered = getKernel(programUnordered, KERNEL_NAME_UNORDERED);
-		kernelSmall = getKernel(programSmall, KERNEL_NAME_SMALL);
+		kernelSmall = getKernel(programSmall, KERNEL_NAME_LARGE);
 		kernelLarge = getKernel(programLarge, KERNEL_NAME_LARGE);
 	}
 	
@@ -570,7 +574,7 @@ public class OpenCLManager
 		clSetKernelArg(kernelSmall, 8, Sizeof.cl_mem, Pointer.to(uniformBufferCL));
 		
 		cl_event computeSmall = new cl_event();
-		err[0] = clEnqueueNDRangeKernel(commandQueue, kernelSmall, 1, null, new long[] {smallModels * 512L}, new long[] {512}, 1, new cl_event[]{acquireGLBuffers}, computeSmall);
+		err[0] = clEnqueueNDRangeKernel(commandQueue, kernelSmall, 1, null, new long[] {smallModels * (512L / SMALL_FACE_COUNT)}, new long[] {512 / SMALL_FACE_COUNT}, 1, new cl_event[]{acquireGLBuffers}, computeSmall);
 		checkErr("Could not enqueue small compute order");
 		
 		clSetKernelArg(kernelLarge, 0, (12 + 12 + 18 + 1 + 4096) * 4, null);
