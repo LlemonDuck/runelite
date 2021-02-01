@@ -4,6 +4,8 @@ import com.jogamp.nativewindow.NativeSurface;
 import com.jogamp.opengl.GL4;
 import com.jogamp.opengl.GLContext;
 import java.nio.ByteBuffer;
+import java.nio.FloatBuffer;
+import java.nio.IntBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Objects;
@@ -489,7 +491,7 @@ public class OpenCLManager
 		log.trace("Uploaded scene buffers in {} ns", end - start);
 	}
 
-	public void copyGLBuffers(int tmpVertexBuffer, long tmpVertexS, int tmpUvBuffer, long tmpUvS, int tmpModelBuffer, long tmpModelLargeS, int tmpModelBufferSmall, long tmpModelSmallS, int tmpModelBufferUnordered, long tmpModelUnorderedS, int tmpOutBuffer, long tmpOutS, int tmpOutUvBuffer, long tmpOutUvS) throws OpenCLException
+	public void copyGLBuffers(IntBuffer tmpVertexBuffer, FloatBuffer tmpUvBuffer, IntBuffer tmpModelBuffer, IntBuffer tmpModelBufferSmall, IntBuffer tmpModelBufferUnordered, int tmpOutBuffer, long tmpOutS, int tmpOutUvBuffer, long tmpOutUvS) throws OpenCLException
 	{
 		long start = System.nanoTime();
 
@@ -507,34 +509,35 @@ public class OpenCLManager
 		tmpModelBufferUnorderedCL = null;
 		tmpOutBufferCL = null;
 		tmpOutUvBufferCL = null;
+		long t2 = System.nanoTime();
 
-		if (tmpVertexS != 0)
+		if (tmpVertexBuffer.limit() != 0)
 		{
-			tmpVertexBufferCL = clCreateFromGLBuffer(context, CL_MEM_READ_ONLY, tmpVertexBuffer, err);
+			tmpVertexBufferCL = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR | CL_MEM_HOST_NO_ACCESS, tmpVertexBuffer.limit() * Sizeof.cl_int, Pointer.toBuffer(tmpVertexBuffer), err);
 			checkErr("Couldn't copy tmpVertexBuffer");
 		}
 
-		if (tmpUvS != 0)
+		if (tmpUvBuffer.limit() != 0)
 		{
-			tmpUvBufferCL = clCreateFromGLBuffer(context, CL_MEM_READ_ONLY, tmpUvBuffer, err);
+			tmpUvBufferCL = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR | CL_MEM_HOST_NO_ACCESS, tmpUvBuffer.limit() * Sizeof.cl_float, Pointer.toBuffer(tmpUvBuffer), err);
 			checkErr("Couldn't copy tmpUvBuffer");
 		}
 
-		if (tmpModelLargeS != 0)
+		if (tmpModelBuffer.limit() != 0)
 		{
-			tmpModelBufferCL = clCreateFromGLBuffer(context, CL_MEM_READ_ONLY, tmpModelBuffer, err);
+			tmpModelBufferCL = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR | CL_MEM_HOST_NO_ACCESS, tmpModelBuffer.limit() * Sizeof.cl_int, Pointer.toBuffer(tmpModelBuffer), err);
 			checkErr("Couldn't copy tmpModelBuffer");
 		}
 
-		if (tmpModelSmallS != 0)
+		if (tmpModelBufferSmall.limit() != 0)
 		{
-			tmpModelBufferSmallCL = clCreateFromGLBuffer(context, CL_MEM_READ_ONLY, tmpModelBufferSmall, err);
+			tmpModelBufferSmallCL = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR | CL_MEM_HOST_NO_ACCESS, tmpModelBufferSmall.limit() * Sizeof.cl_int, Pointer.toBuffer(tmpModelBufferSmall), err);
 			checkErr("Couldn't copy tmpModelBufferSmall");
 		}
 
-		if (tmpModelUnorderedS != 0)
+		if (tmpModelBufferUnordered.limit() != 0)
 		{
-			tmpModelBufferUnorderedCL = clCreateFromGLBuffer(context, CL_MEM_READ_ONLY, tmpModelBufferUnordered, err);
+			tmpModelBufferUnorderedCL = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR | CL_MEM_HOST_NO_ACCESS, tmpModelBufferUnordered.limit() * Sizeof.cl_int, Pointer.toBuffer(tmpModelBufferUnordered), err);
 			checkErr("Couldn't copy tmpModelBufferUnordered");
 		}
 
@@ -551,20 +554,20 @@ public class OpenCLManager
 		}
 		
 		long end = System.nanoTime();
-		log.trace("Buffer reference took {} ns to copy", end - start);
+		log.trace("Buffer reference took {} ns to release + {} ns to copy = {} ns total", t2 - start, end - t2, end - start);
 	}
 
 	public void computeUnordered(int unorderedModels, int smallModels, int largeModels) throws OpenCLException
 	{
 		long start = System.nanoTime();
 		cl_mem[] glBuffersAll = {
-			tmpModelBufferUnorderedCL,
-			tmpModelBufferSmallCL,
-			tmpModelBufferCL,
+//			tmpModelBufferUnorderedCL,
+//			tmpModelBufferSmallCL,
+//			tmpModelBufferCL,
 			vertexBufferCL,
-			tmpVertexBufferCL,
+//			tmpVertexBufferCL,
 			uvBufferCL,
-			tmpUvBufferCL,
+//			tmpUvBufferCL,
 			tmpOutBufferCL,
 			tmpOutUvBufferCL,
 			uniformBufferCL,

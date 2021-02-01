@@ -868,6 +868,40 @@ public class GpuPlugin extends Plugin implements DrawCallbacks
 		IntBuffer modelBufferSmall = this.modelBufferSmall.getBuffer();
 		IntBuffer modelBufferUnordered = this.modelBufferUnordered.getBuffer();
 
+		// Output buffers
+		long tmpOutS = targetBufferOffset * 16L;
+		gl.glBindBuffer(gl.GL_ARRAY_BUFFER, tmpOutBufferId);
+		gl.glBufferData(gl.GL_ARRAY_BUFFER,
+			tmpOutS, // each vertex is an ivec4, which is 16 bytes
+			null,
+			gl.GL_STREAM_DRAW);
+
+		long tmpUvOutS = targetBufferOffset * 16L;
+		gl.glBindBuffer(gl.GL_ARRAY_BUFFER, tmpOutUvBufferId);
+		gl.glBufferData(gl.GL_ARRAY_BUFFER,
+			tmpUvOutS,
+			null,
+			gl.GL_STREAM_DRAW);
+
+		if (useCL)
+		{
+			try
+			{
+				// need to sync here before swapping contexts to opencl
+				openCLManager.copyGLBuffers(vertexBuffer, uvBuffer, modelBuffer, modelBufferSmall, modelBufferUnordered, tmpOutBufferId, tmpOutS, tmpOutUvBufferId, tmpUvOutS);
+				long start = System.nanoTime();
+				gl.glFinish();
+				log.error("glFinish took {} ns", System.nanoTime() - start);
+				openCLManager.computeUnordered(unorderedModels, smallModels, largeModels);
+			}
+			catch (OpenCLException e)
+			{
+				log.error("Error in OpenCL compute", e);
+			}
+
+			return;
+		}
+
 		long tmpBufferS = (long) vertexBuffer.limit() * Integer.BYTES;
 		gl.glBindBuffer(gl.GL_ARRAY_BUFFER, tmpBufferId);
 		gl.glBufferData(gl.GL_ARRAY_BUFFER, tmpBufferS, vertexBuffer, gl.GL_DYNAMIC_DRAW);
@@ -888,21 +922,6 @@ public class GpuPlugin extends Plugin implements DrawCallbacks
 		gl.glBindBuffer(gl.GL_ARRAY_BUFFER, tmpModelBufferUnorderedId);
 		gl.glBufferData(gl.GL_ARRAY_BUFFER, tmpModelUnorderedS, modelBufferUnordered, gl.GL_DYNAMIC_DRAW);
 
-		// Output buffers
-		long tmpOutS = targetBufferOffset * 16L;
-		gl.glBindBuffer(gl.GL_ARRAY_BUFFER, tmpOutBufferId);
-		gl.glBufferData(gl.GL_ARRAY_BUFFER,
-			tmpOutS, // each vertex is an ivec4, which is 16 bytes
-			null,
-			gl.GL_STREAM_DRAW);
-
-		long tmpUvOutS = targetBufferOffset * 16L;
-		gl.glBindBuffer(gl.GL_ARRAY_BUFFER, tmpOutUvBufferId);
-		gl.glBufferData(gl.GL_ARRAY_BUFFER,
-			tmpUvOutS,
-			null,
-			gl.GL_STREAM_DRAW);
-
 		// Bind UBO to compute programs
 		gl.glUniformBlockBinding(glSmallComputeProgram, uniBlockSmall, 0);
 		gl.glUniformBlockBinding(glComputeProgram, uniBlockLarge, 0);
@@ -911,25 +930,6 @@ public class GpuPlugin extends Plugin implements DrawCallbacks
 		 * Compute is split into three separate programs: 'unordered', 'small', and 'large'
 		 * to save on GPU resources. Small will sort <= 512 faces, large will do <= 4096.
 		 */
-
-		if (useCL)
-		{
-			try
-			{
-				// need to sync here before swapping contexts to opencl
-				openCLManager.copyGLBuffers(tmpBufferId, tmpBufferS, tmpUvBufferId, tmpUvS, tmpModelBufferId, tmpModelLargeS, tmpModelBufferSmallId, tmpModelSmallS, tmpModelBufferUnorderedId, tmpModelUnorderedS, tmpOutBufferId, tmpOutS, tmpOutUvBufferId, tmpUvOutS);
-				long start = System.nanoTime();
-				gl.glFinish();
-				log.error("glFinish took {} ns", System.nanoTime() - start);
-				openCLManager.computeUnordered(unorderedModels, smallModels, largeModels);
-			}
-			catch (OpenCLException e)
-			{
-				log.error("Error in OpenCL compute", e);
-			}
-
-			return;
-		}
 
 		// unordered
 		gl.glUseProgram(glUnorderedComputeProgram);
