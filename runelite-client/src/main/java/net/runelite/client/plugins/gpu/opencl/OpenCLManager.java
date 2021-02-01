@@ -41,7 +41,7 @@ public class OpenCLManager
 	private static final String GL_SHARING_PLATFORM_EXT = "cl_khr_gl_sharing";
 	private static final String MACOS_GL_SHARING_PLATFORM_EXT = "cl_APPLE_gl_sharing";
 
-	private static final long MIN_WORK_GROUP_SIZE = 512;
+	private static final long MIN_WORK_GROUP_SIZE = 256;
 	private static int LARGE_FACE_COUNT;
 	private static int SMALL_FACE_COUNT;
 
@@ -459,27 +459,40 @@ public class OpenCLManager
 
 	public void copySceneBuffers(long vBufS, long uvBufS, int vertexBuffer, int uvBuffer) throws OpenCLException
 	{
+		long start = System.nanoTime();
 		Optional.ofNullable(vertexBufferCL).ifPresent(CL::clReleaseMemObject);
 		Optional.ofNullable(uvBufferCL).ifPresent(CL::clReleaseMemObject);
 		vertexBufferCL = null;
 		uvBufferCL = null;
 
-		if (vBufS != 0 && uvBufS != 0)
+		if (vBufS != 0)
 		{
 			vertexBufferCL = clCreateFromGLBuffer(context, CL_MEM_READ_ONLY, vertexBuffer, err);
 			checkErr("Couldn't copy vertexBuffer");
-
+		}
+		else
+		{
+			log.warn("Could not copy 0-size vertex buffer into opencl context");
+		}
+		
+		if (uvBufS != 0)
+		{
 			uvBufferCL = clCreateFromGLBuffer(context, CL_MEM_READ_ONLY, uvBuffer, err);
 			checkErr("Couldn't copy uvBuffer");
 		}
 		else
 		{
-			log.warn("Could not copy 0-size buffer into opencl context");
+			log.warn("Could not copy 0-size uv buffer into opencl context");
 		}
+		
+		long end = System.nanoTime();
+		log.trace("Uploaded scene buffers in {} ns", end - start);
 	}
 
 	public void copyGLBuffers(int tmpVertexBuffer, long tmpVertexS, int tmpUvBuffer, long tmpUvS, int tmpModelBuffer, long tmpModelLargeS, int tmpModelBufferSmall, long tmpModelSmallS, int tmpModelBufferUnordered, long tmpModelUnorderedS, int tmpOutBuffer, long tmpOutS, int tmpOutUvBuffer, long tmpOutUvS) throws OpenCLException
 	{
+		long start = System.nanoTime();
+
 		Optional.ofNullable(tmpVertexBufferCL).ifPresent(CL::clReleaseMemObject);
 		Optional.ofNullable(tmpUvBufferCL).ifPresent(CL::clReleaseMemObject);
 		Optional.ofNullable(tmpModelBufferCL).ifPresent(CL::clReleaseMemObject);
@@ -527,19 +540,23 @@ public class OpenCLManager
 
 		if (tmpOutS != 0)
 		{
-			tmpOutBufferCL = clCreateFromGLBuffer(context, CL_MEM_READ_WRITE, tmpOutBuffer, err);
+			tmpOutBufferCL = clCreateFromGLBuffer(context, CL_MEM_WRITE_ONLY, tmpOutBuffer, err);
 			checkErr("Couldn't copy tmpModelBufferUnordered");
 		}
 
 		if (tmpOutUvS != 0)
 		{
-			tmpOutUvBufferCL = clCreateFromGLBuffer(context, CL_MEM_READ_WRITE, tmpOutUvBuffer, err);
+			tmpOutUvBufferCL = clCreateFromGLBuffer(context, CL_MEM_WRITE_ONLY, tmpOutUvBuffer, err);
 			checkErr("Couldn't copy tmpOutUvBuffer");
 		}
+		
+		long end = System.nanoTime();
+		log.trace("Buffer reference took {} ns to copy", end - start);
 	}
 
 	public void computeUnordered(int unorderedModels, int smallModels, int largeModels) throws OpenCLException
 	{
+		long start = System.nanoTime();
 		cl_mem[] glBuffersAll = {
 			tmpModelBufferUnorderedCL,
 			tmpModelBufferSmallCL,
@@ -602,7 +619,15 @@ public class OpenCLManager
 
 		// queue release call after compute
 		clEnqueueReleaseGLObjects(commandQueue, glBuffers.length, glBuffers, 3, new cl_event[]{computeUnordered, computeSmall, computeLarge}, null);
+		long end = System.nanoTime();
+		log.trace("Enqueueing compute calls took {} ns", end - start);
 
+		long end2 = System.nanoTime();
+		log.trace("clFinish sync took {} ns ({} ns from compute start)", end2 - end, end2 - start);
+	}
+	
+	public void finish() throws OpenCLException
+	{
 		err[0] = clFinish(commandQueue);
 		checkErr("Could not synchronize with end of CL compute call");
 	}

@@ -917,8 +917,10 @@ public class GpuPlugin extends Plugin implements DrawCallbacks
 			try
 			{
 				// need to sync here before swapping contexts to opencl
-				gl.glFinish();
 				openCLManager.copyGLBuffers(tmpBufferId, tmpBufferS, tmpUvBufferId, tmpUvS, tmpModelBufferId, tmpModelLargeS, tmpModelBufferSmallId, tmpModelSmallS, tmpModelBufferUnorderedId, tmpModelUnorderedS, tmpOutBufferId, tmpOutS, tmpOutUvBufferId, tmpUvOutS);
+				long start = System.nanoTime();
+				gl.glFinish();
+				log.error("glFinish took {} ns", System.nanoTime() - start);
 				openCLManager.computeUnordered(unorderedModels, smallModels, largeModels);
 			}
 			catch (OpenCLException e)
@@ -1250,6 +1252,17 @@ public class GpuPlugin extends Plugin implements DrawCallbacks
 				if (useComputeShaders)
 				{
 					gl.glMemoryBarrier(gl.GL_SHADER_STORAGE_BARRIER_BIT);
+				}
+				else if (useCL)
+				{
+					try
+					{
+						openCLManager.finish();
+					}
+					catch (OpenCLException e)
+					{
+						log.error("failed to sync with cl", e);
+					}
 				}
 
 				// Draw using the output buffer of the compute

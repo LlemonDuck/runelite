@@ -68,13 +68,13 @@ void computeLarge(__local struct shared_data *shared,
     get_face(shared, uni, vb, tempvb, localId + i, minfo, uni->cameraYaw, uni->cameraPitch, &(prio[i]), &(dis[i]), &(v1[i]), &(v2[i]), &(v3[i]));
   }
 
-  barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
+  barrier(CLK_LOCAL_MEM_FENCE);
 
   for(int i = 0; i < FACE_COUNT; i++) {
     add_face_prio_distance(shared, uni, localId + i, minfo, v1[i], v2[i], v3[i], prio[i], dis[i], pos);
   }
 
-  barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
+  barrier(CLK_LOCAL_MEM_FENCE);
 
   int prioAdj[FACE_COUNT];
   int idx[FACE_COUNT];
@@ -82,13 +82,13 @@ void computeLarge(__local struct shared_data *shared,
     idx[i] = map_face_priority(shared, localId + i, minfo, prio[i], dis[i], &(prioAdj[i]));
   }
 
-  barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
+  barrier(CLK_LOCAL_MEM_FENCE);
 
   for(int i = 0; i < FACE_COUNT; i++) {
     insert_dfs(shared, localId + i, minfo, prioAdj[i], dis[i], idx[i]);
   }
 
-  barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
+  barrier(CLK_LOCAL_MEM_FENCE);
 
   for(int i = 0; i < FACE_COUNT; i++) {
     sort_and_insert(shared, uv, tempuv, vout, uvout, localId + i, minfo, prioAdj[i], dis[i], v1[i], v2[i], v3[i]);
