@@ -29,7 +29,7 @@
 #include priority_render.cl
 
 __kernel
-__attribute__((reqd_work_group_size(512, 1, 1)))
+__attribute__((reqd_work_group_size(256, 1, 1)))
 void computeSmall(__local struct shared_data *shared,
 				  __global const struct modelinfo *ol,
                   __global const int4 *vb,

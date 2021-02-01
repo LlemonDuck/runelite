@@ -108,7 +108,7 @@ public class GpuPlugin extends Plugin implements DrawCallbacks
 {
 	// This is the maximum number of triangles the compute shaders support
 	private static final int MAX_TRIANGLE = 4096;
-	private static final int SMALL_TRIANGLE_COUNT = 512;
+	private static final int SMALL_TRIANGLE_COUNT = 256;
 	private static final int FLAG_SCENE_BUFFER = Integer.MIN_VALUE;
 	private static final int DEFAULT_DISTANCE = 25;
 	static final int MAX_DISTANCE = 90;

@@ -41,7 +41,7 @@ public class OpenCLManager
 	private static final String GL_SHARING_PLATFORM_EXT = "cl_khr_gl_sharing";
 	private static final String MACOS_GL_SHARING_PLATFORM_EXT = "cl_APPLE_gl_sharing";
 
-	private static final long MIN_WORK_GROUP_SIZE = 512;
+	private static final long MIN_WORK_GROUP_SIZE = 256;
 	private static int LARGE_FACE_COUNT;
 	private static Template BASE_TEMPLATE; 
 
@@ -559,7 +559,7 @@ public class OpenCLManager
 		err[0] = clEnqueueNDRangeKernel(commandQueue, kernelUnordered, 1, null, new long[] {unorderedModels * 6L}, new long[] {6}, 1, new cl_event[]{acquireGLBuffers}, computeUnordered);
 		checkErr("Could not enqueue compute order");
 		
-		clSetKernelArg(kernelSmall, 0, (12 + 12 + 18 + 1 + 512) * 4, null);
+		clSetKernelArg(kernelSmall, 0, (12 + 12 + 18 + 1 + 256) * 4, null);
 		clSetKernelArg(kernelSmall, 1, Sizeof.cl_mem, tmpModelBufferSmallCL != null ? Pointer.to(tmpModelBufferSmallCL) : null);
 		clSetKernelArg(kernelSmall, 2, Sizeof.cl_mem, vertexBufferCL != null ? Pointer.to(vertexBufferCL) : null);
 		clSetKernelArg(kernelSmall, 3, Sizeof.cl_mem, tmpVertexBufferCL != null ? Pointer.to(tmpVertexBufferCL) : null);
@@ -570,7 +570,7 @@ public class OpenCLManager
 		clSetKernelArg(kernelSmall, 8, Sizeof.cl_mem, Pointer.to(uniformBufferCL));
 		
 		cl_event computeSmall = new cl_event();
-		err[0] = clEnqueueNDRangeKernel(commandQueue, kernelSmall, 1, null, new long[] {smallModels * 512L}, new long[] {512}, 1, new cl_event[]{acquireGLBuffers}, computeSmall);
+		err[0] = clEnqueueNDRangeKernel(commandQueue, kernelSmall, 1, null, new long[] {smallModels * 256L}, new long[] {256L}, 1, new cl_event[]{acquireGLBuffers}, computeSmall);
 		checkErr("Could not enqueue small compute order");
 		
 		clSetKernelArg(kernelLarge, 0, (12 + 12 + 18 + 1 + 4096) * 4, null);
