@@ -46,7 +46,7 @@ public class OpenCLManager
 	private static int SMALL_FACE_COUNT;
 
 	private static String SOURCE_COMPUTE_UNORDERED;
-	private static String SOURCE_COMPUTE_SMALL; 
+	private static String SOURCE_COMPUTE_SMALL;
 	private static String SOURCE_COMPUTE_LARGE;
 
 	private final int[] err = new int[1];
@@ -63,7 +63,7 @@ public class OpenCLManager
 	private cl_kernel kernelUnordered;
 	private cl_kernel kernelSmall;
 	private cl_kernel kernelLarge;
-	
+
 	private cl_mem uniformBufferCL;
 
 	private cl_mem vertexBufferCL;
@@ -84,7 +84,8 @@ public class OpenCLManager
 
 	public void init(GL4 gl) throws OpenCLException
 	{
-		switch (OSType.getOSType()) {
+		switch (OSType.getOSType())
+		{
 			case Windows:
 			case Linux:
 				initPlatform();
@@ -233,7 +234,9 @@ public class OpenCLManager
 			logPlatformInfo(platform, CL_PLATFORM_VENDOR);
 			String[] extensions = logPlatformInfo(platform, CL_PLATFORM_EXTENSIONS).split(" ");
 			if (Arrays.stream(extensions).noneMatch(s -> s.equals(GL_SHARING_PLATFORM_EXT) || s.equals(MACOS_GL_SHARING_PLATFORM_EXT)))
+			{
 				throw new OpenCLException("Platform does not support OpenGL buffer sharing");
+			}
 		}
 
 		platform = platforms[0];
@@ -282,11 +285,13 @@ public class OpenCLManager
 		GLContext glContext = gl.getContext();
 		log.debug("Got GLContext of type {}", glContext.getClass().getSimpleName());
 		if (!glContext.isCurrent())
+		{
 			throw new OpenCLException("Can't create OpenCL context from inactive GL Context");
+		}
 
 		// get correct props based on os
 		long glContextHandle = glContext.getHandle();
-		GLContextImpl glContextImpl = (GLContextImpl)glContext;
+		GLContextImpl glContextImpl = (GLContextImpl) glContext;
 		GLDrawableImpl glDrawableImpl = glContextImpl.getDrawableImpl();
 		NativeSurface nativeSurface = glDrawableImpl.getNativeSurface();
 
@@ -320,10 +325,12 @@ public class OpenCLManager
 		// get sharegroup from gl context
 		GLContext glContext = gl.getContext();
 		if (!glContext.isCurrent())
+		{
 			throw new OpenCLException("Can't create context from inactive GL");
+		}
 		long cglContext = CGL.CGLGetCurrentContext();
 		long cglShareGroup = CGL.CGLGetShareGroup(cglContext);
-		
+
 		// build context props
 		cl_context_properties contextProps = new cl_context_properties();
 		contextProps.addProperty(CL_CONTEXT_PROPERTY_USE_CGL_SHAREGROUP_APPLE, cglShareGroup);
@@ -337,16 +344,16 @@ public class OpenCLManager
 		device = new cl_device_id();
 		clGetGLContextInfoAPPLE(context, cglContext, CL_CGL_DEVICE_FOR_CURRENT_VIRTUAL_SCREEN_APPLE, Sizeof.cl_device_id, Pointer.to(device), null);
 		checkErr("Could not get device from CLGL context");
-		
+
 		log.debug("Got macOS CLGL compute device {}", device);
 	}
-	
+
 	private void ensureMinWorkGroupSize() throws OpenCLException
 	{
 		long[] maxWorkGroupSize = new long[1];
 		clGetDeviceInfo(device, CL_DEVICE_MAX_WORK_GROUP_SIZE, Sizeof.size_t, Pointer.to(maxWorkGroupSize), null);
 		log.debug("DEVICE CL_DEVICE_MAX_WORK_GROUP_SIZE: {}", maxWorkGroupSize[0]);
-		
+
 		if (maxWorkGroupSize[0] < MIN_WORK_GROUP_SIZE)
 		{
 			throw new OpenCLException("Compute device does not support min work group size " + MIN_WORK_GROUP_SIZE);
@@ -374,7 +381,8 @@ public class OpenCLManager
 		{
 			clBuildProgram(program, 0, null, null, null, null);
 			checkErr("Could not compile program from source:\n" + programSource);
-		} catch (OpenCLException e)
+		}
+		catch (OpenCLException e)
 		{
 			logBuildInfo(program, CL_PROGRAM_BUILD_LOG);
 			throw e;
@@ -390,7 +398,8 @@ public class OpenCLManager
 	private cl_kernel getKernel(cl_program program, String kernelName) throws OpenCLException
 	{
 		// print all kernels in program
-		if (log.isDebugEnabled()) {
+		if (log.isDebugEnabled())
+		{
 			int[] kernelCount = new int[1];
 			err[0] = clCreateKernelsInProgram(program, 0, null, kernelCount);
 			checkErr("Could not load kernels in program " + program);
@@ -427,11 +436,11 @@ public class OpenCLManager
 		Template templateLarge = new Template()
 			.addInclude(OpenCLManager.class)
 			.add(key -> key.equals("FACE_COUNT") ? ("#define FACE_COUNT " + LARGE_FACE_COUNT) : null);
-		
+
 		SOURCE_COMPUTE_UNORDERED = new Template().addInclude(OpenCLManager.class).load("comp_unordered.cl");
 		SOURCE_COMPUTE_SMALL = templateSmall.load("comp_large.cl");
 		SOURCE_COMPUTE_LARGE = templateLarge.load("comp_large.cl");
-		
+
 		programUnordered = compileProgram(SOURCE_COMPUTE_UNORDERED);
 		programSmall = compileProgram(SOURCE_COMPUTE_SMALL);
 		programLarge = compileProgram(SOURCE_COMPUTE_LARGE);
@@ -440,7 +449,7 @@ public class OpenCLManager
 		kernelSmall = getKernel(programSmall, KERNEL_NAME_LARGE);
 		kernelLarge = getKernel(programLarge, KERNEL_NAME_LARGE);
 	}
-	
+
 	public void copyUniformBuffer(int uniformBuffer) throws OpenCLException
 	{
 		Optional.ofNullable(uniformBufferCL).ifPresent(CL::clReleaseMemObject);
@@ -560,9 +569,9 @@ public class OpenCLManager
 
 		// queue compute call after acquireGLBuffers
 		cl_event computeUnordered = new cl_event();
-		err[0] = clEnqueueNDRangeKernel(commandQueue, kernelUnordered, 1, null, new long[] {unorderedModels * 6L}, new long[] {6}, 1, new cl_event[]{acquireGLBuffers}, computeUnordered);
+		err[0] = clEnqueueNDRangeKernel(commandQueue, kernelUnordered, 1, null, new long[]{unorderedModels * 6L}, new long[]{6}, 1, new cl_event[]{acquireGLBuffers}, computeUnordered);
 		checkErr("Could not enqueue compute order");
-		
+
 		clSetKernelArg(kernelSmall, 0, (12 + 12 + 18 + 1 + 512) * 4, null);
 		clSetKernelArg(kernelSmall, 1, Sizeof.cl_mem, tmpModelBufferSmallCL != null ? Pointer.to(tmpModelBufferSmallCL) : null);
 		clSetKernelArg(kernelSmall, 2, Sizeof.cl_mem, vertexBufferCL != null ? Pointer.to(vertexBufferCL) : null);
@@ -572,11 +581,11 @@ public class OpenCLManager
 		clSetKernelArg(kernelSmall, 6, Sizeof.cl_mem, tmpOutBufferCL != null ? Pointer.to(tmpOutBufferCL) : null);
 		clSetKernelArg(kernelSmall, 7, Sizeof.cl_mem, tmpOutUvBufferCL != null ? Pointer.to(tmpOutUvBufferCL) : null);
 		clSetKernelArg(kernelSmall, 8, Sizeof.cl_mem, Pointer.to(uniformBufferCL));
-		
+
 		cl_event computeSmall = new cl_event();
-		err[0] = clEnqueueNDRangeKernel(commandQueue, kernelSmall, 1, null, new long[] {smallModels * (512L / SMALL_FACE_COUNT)}, new long[] {512 / SMALL_FACE_COUNT}, 1, new cl_event[]{acquireGLBuffers}, computeSmall);
+		err[0] = clEnqueueNDRangeKernel(commandQueue, kernelSmall, 1, null, new long[]{smallModels * (512L / SMALL_FACE_COUNT)}, new long[]{512 / SMALL_FACE_COUNT}, 1, new cl_event[]{acquireGLBuffers}, computeSmall);
 		checkErr("Could not enqueue small compute order");
-		
+
 		clSetKernelArg(kernelLarge, 0, (12 + 12 + 18 + 1 + 4096) * 4, null);
 		clSetKernelArg(kernelLarge, 1, Sizeof.cl_mem, tmpModelBufferCL != null ? Pointer.to(tmpModelBufferCL) : null);
 		clSetKernelArg(kernelLarge, 2, Sizeof.cl_mem, vertexBufferCL != null ? Pointer.to(vertexBufferCL) : null);
@@ -586,9 +595,9 @@ public class OpenCLManager
 		clSetKernelArg(kernelLarge, 6, Sizeof.cl_mem, tmpOutBufferCL != null ? Pointer.to(tmpOutBufferCL) : null);
 		clSetKernelArg(kernelLarge, 7, Sizeof.cl_mem, tmpOutUvBufferCL != null ? Pointer.to(tmpOutUvBufferCL) : null);
 		clSetKernelArg(kernelLarge, 8, Sizeof.cl_mem, uniformBufferCL != null ? Pointer.to(uniformBufferCL) : null);
-		
+
 		cl_event computeLarge = new cl_event();
-		err[0] = clEnqueueNDRangeKernel(commandQueue, kernelLarge, 1, null, new long[] {(long) largeModels * (4096 / LARGE_FACE_COUNT)}, new long[] {4096 / LARGE_FACE_COUNT}, 1, new cl_event[]{acquireGLBuffers}, computeLarge);
+		err[0] = clEnqueueNDRangeKernel(commandQueue, kernelLarge, 1, null, new long[]{(long) largeModels * (4096 / LARGE_FACE_COUNT)}, new long[]{4096 / LARGE_FACE_COUNT}, 1, new cl_event[]{acquireGLBuffers}, computeLarge);
 		checkErr("Could not enqueue large compute order");
 
 		// queue release call after compute
