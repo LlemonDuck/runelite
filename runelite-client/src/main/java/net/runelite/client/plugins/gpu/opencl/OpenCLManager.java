@@ -132,7 +132,7 @@ public class OpenCLManager
 		tmpModelBufferUnorderedCL = null;
 
 		Optional.ofNullable(uniformBufferCL).ifPresent(CL::clReleaseMemObject);
-		tmpModelBufferUnorderedCL = null;
+		uniformBufferCL = null;
 
 		Optional.ofNullable(programUnordered).ifPresent(CL::clReleaseProgram);
 		programUnordered = null;
@@ -144,13 +144,13 @@ public class OpenCLManager
 		programLarge = null;
 
 		Optional.ofNullable(kernelUnordered).ifPresent(CL::clReleaseKernel);
-		programUnordered = null;
+		kernelUnordered = null;
 
 		Optional.ofNullable(kernelSmall).ifPresent(CL::clReleaseKernel);
-		programSmall = null;
+		kernelSmall = null;
 
 		Optional.ofNullable(kernelLarge).ifPresent(CL::clReleaseKernel);
-		programLarge = null;
+		kernelLarge = null;
 
 		Optional.ofNullable(commandQueue).ifPresent(CL::clReleaseCommandQueue);
 		commandQueue = null;
