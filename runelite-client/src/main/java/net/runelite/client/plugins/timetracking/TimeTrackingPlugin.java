@@ -305,4 +305,9 @@ public class TimeTrackingPlugin extends Plugin
 			panel.update();
 		}
 	}
+
+	public void updateSidePanel()
+	{
+		panel.update();
+	}
 }

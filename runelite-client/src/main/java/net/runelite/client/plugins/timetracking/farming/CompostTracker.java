@@ -55,6 +55,7 @@ import net.runelite.api.widgets.WidgetInfo;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.plugins.timetracking.TimeTrackingConfig;
+import net.runelite.client.plugins.timetracking.TimeTrackingPlugin;
 
 @Singleton
 @Slf4j
@@ -92,6 +93,7 @@ public class CompostTracker
 	private final Client client;
 	private final FarmingWorld farmingWorld;
 	private final ConfigManager configManager;
+	private final TimeTrackingPlugin plugin;
 
 	@VisibleForTesting
 	final Map<FarmingPatch, PendingCompost> pendingCompostActions = new HashMap<>();
@@ -198,6 +200,7 @@ public class CompostTracker
 			{
 				setCompostState(pc.getFarmingPatch(), compostUsed);
 				pendingCompostActions.remove(pc.getFarmingPatch());
+				plugin.updateSidePanel();
 			});
 	}
 
