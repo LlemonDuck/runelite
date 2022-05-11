@@ -34,6 +34,7 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.inject.Inject;
+import javax.inject.Provider;
 import javax.inject.Singleton;
 import lombok.RequiredArgsConstructor;
 import lombok.Value;
@@ -55,6 +56,7 @@ import net.runelite.api.widgets.WidgetInfo;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.plugins.timetracking.TimeTrackingConfig;
+import net.runelite.client.plugins.timetracking.TimeTrackingPanel;
 
 @Singleton
 @Slf4j
@@ -92,6 +94,7 @@ public class CompostTracker
 	private final Client client;
 	private final FarmingWorld farmingWorld;
 	private final ConfigManager configManager;
+	private final Provider<TimeTrackingPanel> ttPanel;
 
 	@VisibleForTesting
 	final Map<FarmingPatch, PendingCompost> pendingCompostActions = new HashMap<>();
@@ -198,6 +201,7 @@ public class CompostTracker
 			{
 				setCompostState(pc.getFarmingPatch(), compostUsed);
 				pendingCompostActions.remove(pc.getFarmingPatch());
+				ttPanel.get().update();
 			});
 	}
 

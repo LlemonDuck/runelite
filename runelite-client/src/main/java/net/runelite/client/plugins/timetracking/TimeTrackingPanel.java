@@ -35,6 +35,7 @@ import java.awt.image.BufferedImage;
 import java.util.HashMap;
 import java.util.Map;
 import javax.annotation.Nullable;
+import javax.inject.Singleton;
 import javax.swing.ImageIcon;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -53,7 +54,8 @@ import net.runelite.client.ui.components.materialtabs.MaterialTab;
 import net.runelite.client.ui.components.materialtabs.MaterialTabGroup;
 import net.runelite.client.util.AsyncBufferedImage;
 
-class TimeTrackingPanel extends PluginPanel
+@Singleton
+public class TimeTrackingPanel extends PluginPanel
 {
 	private final ItemManager itemManager;
 	private final TimeTrackingConfig config;
@@ -167,7 +169,7 @@ class TimeTrackingPanel extends PluginPanel
 	/**
 	 * Updates the active tab panel, if this plugin panel is displayed.
 	 */
-	void update()
+	public void update()
 	{
 		if (!active || activeTabPanel == null)
 		{
