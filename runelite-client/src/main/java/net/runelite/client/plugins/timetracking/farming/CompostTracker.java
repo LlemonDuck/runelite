@@ -93,6 +93,9 @@ public class CompostTracker
 	private final FarmingWorld farmingWorld;
 	private final ConfigManager configManager;
 
+	// FarmingTracker checks this flag to determine if it needs to update the ui panel
+	private boolean changedThisTick = false;
+
 	@VisibleForTesting
 	final Map<FarmingPatch, PendingCompost> pendingCompostActions = new HashMap<>();
 
@@ -198,6 +201,7 @@ public class CompostTracker
 			{
 				setCompostState(pc.getFarmingPatch(), compostUsed);
 				pendingCompostActions.remove(pc.getFarmingPatch());
+				changedThisTick = true;
 			});
 	}
 
@@ -288,6 +292,17 @@ public class CompostTracker
 		}
 
 		return null;
+	}
+
+	public boolean hasChangedThisTick()
+	{
+		if (changedThisTick)
+		{
+			changedThisTick = false;
+			return true;
+		}
+
+		return false;
 	}
 
 }

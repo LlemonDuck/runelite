@@ -100,7 +100,7 @@ public class FarmingTracker
 	 */
 	public boolean updateData(WorldPoint location, int timeSinceModalClose)
 	{
-		boolean changed = false;
+		boolean changed = compostTracker.hasChangedThisTick();
 
 		//Varbits don't get sent when a modal widget is open so just return
 		for (WidgetNode widgetNode : client.getComponentTable())
