@@ -28,6 +28,7 @@ package net.runelite.client.plugins.party;
 import net.runelite.client.config.Config;
 import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigItem;
+import net.runelite.client.config.Keybind;
 
 @ConfigGroup(PartyConfig.GROUP)
 public interface PartyConfig extends Config
@@ -37,7 +38,7 @@ public interface PartyConfig extends Config
 	@ConfigItem(
 		keyName = "pings",
 		name = "Pings",
-		description = "Enables party pings (shift + left-click)",
+		description = "Enables party pings using the configured ping hotkey",
 		position = 1
 	)
 	default boolean pings()
@@ -54,6 +55,17 @@ public interface PartyConfig extends Config
 	default boolean sounds()
 	{
 		return true;
+	}
+
+	@ConfigItem(
+		keyName = "pingHotkey",
+		name = "Ping Hotkey",
+		description = "Key to press to ping",
+		position = 3
+	)
+	default Keybind pingHotkey()
+	{
+		return Keybind.NOT_SET;
 	}
 
 	@ConfigItem(

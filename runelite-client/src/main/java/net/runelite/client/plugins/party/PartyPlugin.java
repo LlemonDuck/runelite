@@ -45,18 +45,14 @@ import lombok.Getter;
 import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
-import net.runelite.api.KeyCode;
 import net.runelite.api.MenuAction;
-import net.runelite.api.MenuEntry;
 import net.runelite.api.Player;
 import net.runelite.api.Skill;
 import net.runelite.api.SoundEffectID;
-import net.runelite.api.Tile;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.CommandExecuted;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
-import net.runelite.api.events.MenuOptionClicked;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.chat.ChatMessageManager;
 import net.runelite.client.chat.QueuedMessage;
@@ -66,6 +62,7 @@ import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.events.OverlayMenuClicked;
 import net.runelite.client.events.PartyChanged;
 import net.runelite.client.events.PartyMemberAvatar;
+import net.runelite.client.input.KeyManager;
 import net.runelite.client.party.PartyMember;
 import net.runelite.client.party.PartyService;
 import net.runelite.client.party.WSClient;
@@ -129,6 +126,12 @@ public class PartyPlugin extends Plugin
 	private ClientToolbar clientToolbar;
 
 	@Inject
+	private KeyManager keyManager;
+
+	@Inject
+	private PartyPingHotkeyListener pingHotkeyListener;
+
+	@Inject
 	@Named("developerMode")
 	boolean developerMode;
 
@@ -168,6 +171,7 @@ public class PartyPlugin extends Plugin
 		clientToolbar.addNavigation(navButton);
 
 		overlayManager.add(partyPingOverlay);
+		keyManager.registerKeyListener(pingHotkeyListener);
 		wsClient.registerMessage(SkillUpdate.class);
 		wsClient.registerMessage(TilePing.class);
 		wsClient.registerMessage(LocationUpdate.class);
@@ -187,6 +191,7 @@ public class PartyPlugin extends Plugin
 		pendingTilePings.clear();
 		worldMapManager.removeIf(PartyWorldMapPoint.class::isInstance);
 		overlayManager.remove(partyPingOverlay);
+		keyManager.unregisterKeyListener(pingHotkeyListener);
 		wsClient.unregisterMessage(SkillUpdate.class);
 		wsClient.unregisterMessage(TilePing.class);
 		wsClient.unregisterMessage(LocationUpdate.class);
@@ -224,46 +229,6 @@ public class PartyPlugin extends Plugin
 			// rebuild the panel in the event the "Recolor names" option changes
 			SwingUtilities.invokeLater(panel::updateAll);
 		}
-	}
-
-	@Subscribe
-	public void onMenuOptionClicked(MenuOptionClicked event)
-	{
-		if (!client.isKeyPressed(KeyCode.KC_SHIFT) || client.isMenuOpen() || party.getMembers().isEmpty() || !config.pings())
-		{
-			return;
-		}
-
-		Tile selectedSceneTile = client.getSelectedSceneTile();
-		if (selectedSceneTile == null)
-		{
-			return;
-		}
-
-		boolean isOnCanvas = false;
-
-		for (MenuEntry menuEntry : client.getMenuEntries())
-		{
-			if (menuEntry == null)
-			{
-				continue;
-			}
-
-			if ("walk here".equalsIgnoreCase(menuEntry.getOption()))
-			{
-				isOnCanvas = true;
-			}
-		}
-
-		if (!isOnCanvas)
-		{
-			return;
-		}
-
-		event.consume();
-		final TilePing tilePing = new TilePing(selectedSceneTile.getWorldLocation());
-		tilePing.setMemberId(party.getLocalMember().getMemberId());
-		party.send(tilePing);
 	}
 
 	@Subscribe
