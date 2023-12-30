@@ -48,9 +48,9 @@ import net.runelite.client.ui.overlay.tooltip.Tooltip;
 import net.runelite.client.ui.overlay.tooltip.TooltipManager;
 import net.runelite.client.util.ColorUtil;
 import net.runelite.client.util.QuantityFormatter;
+import net.runelite.client.util.apache.DurationFormatUtils;
 import net.runelite.http.api.item.ItemEquipmentStats;
 import net.runelite.http.api.item.ItemStats;
-import org.apache.commons.lang3.time.DurationFormatUtils;
 
 public class ItemStatOverlay extends Overlay
 {

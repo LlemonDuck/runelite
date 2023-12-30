@@ -95,9 +95,9 @@ import net.runelite.client.util.AsyncBufferedImage;
 import net.runelite.client.util.ImageUtil;
 import net.runelite.client.util.QuantityFormatter;
 import net.runelite.client.util.Text;
+import net.runelite.client.util.apache.WordUtils;
 import net.runelite.http.api.chat.Duels;
 import net.runelite.http.api.item.ItemPrice;
-import org.apache.commons.text.WordUtils;
 
 @PluginDescriptor(
 	name = "Chat Commands",

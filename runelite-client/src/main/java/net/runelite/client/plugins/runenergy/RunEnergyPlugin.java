@@ -62,7 +62,7 @@ import net.runelite.client.game.ItemVariationMapping;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.overlay.OverlayManager;
-import org.apache.commons.lang3.StringUtils;
+import net.runelite.client.util.apache.StringUtils;
 
 @PluginDescriptor(
 	name = "Run Energy",

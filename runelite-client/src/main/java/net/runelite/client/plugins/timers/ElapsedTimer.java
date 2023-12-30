@@ -30,7 +30,7 @@ import java.awt.image.BufferedImage;
 import java.awt.Color;
 import java.time.Duration;
 import java.time.Instant;
-import org.apache.commons.lang3.time.DurationFormatUtils;
+import net.runelite.client.util.apache.DurationFormatUtils;
 
 @Getter
 class ElapsedTimer extends InfoBox

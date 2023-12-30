@@ -38,7 +38,7 @@ import net.runelite.client.ui.overlay.OverlayLayer;
 import net.runelite.client.ui.overlay.OverlayPosition;
 import net.runelite.client.ui.overlay.tooltip.Tooltip;
 import net.runelite.client.ui.overlay.tooltip.TooltipManager;
-import org.apache.commons.lang3.StringUtils;
+import net.runelite.client.util.apache.StringUtils;
 
 class RunEnergyOverlay extends Overlay
 {

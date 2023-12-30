@@ -67,7 +67,7 @@ import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.util.Text;
-import org.apache.commons.lang3.StringUtils;
+import net.runelite.client.util.apache.StringUtils;
 
 @PluginDescriptor(
 	name = "Chat Filter",

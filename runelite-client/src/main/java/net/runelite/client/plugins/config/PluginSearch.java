@@ -32,7 +32,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 import net.runelite.client.util.Text;
-import org.apache.commons.lang3.StringUtils;
 
 public class PluginSearch
 {
@@ -48,7 +47,7 @@ public class PluginSearch
 
 	private static Comparator<SearchablePlugin> comparator(String query)
 	{
-		if (StringUtils.isBlank(query))
+		if (query.isBlank())
 		{
 			return Comparator.nullsLast(Comparator.comparing(SearchablePlugin::isPinned, Comparator.nullsLast(Comparator.reverseOrder())))
 				.thenComparing(SearchablePlugin::getSearchableName, Comparator.nullsLast(Comparator.naturalOrder()));

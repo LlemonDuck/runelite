@@ -35,7 +35,7 @@ import net.runelite.client.plugins.itemstats.Positivity;
 import net.runelite.client.plugins.itemstats.StatChange;
 import static net.runelite.client.plugins.itemstats.stats.Stats.HITPOINTS;
 import net.runelite.client.plugins.itemstats.StatsChanges;
-import org.apache.commons.lang3.ArrayUtils;
+import net.runelite.client.util.apache.ArrayUtils;
 
 @RequiredArgsConstructor
 public class MixedPotion implements Effect

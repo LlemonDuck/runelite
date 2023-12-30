@@ -58,7 +58,7 @@ import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.menus.MenuManager;
 import net.runelite.client.menus.WidgetMenuOption;
-import org.apache.commons.lang3.ArrayUtils;
+import net.runelite.client.util.apache.ArrayUtils;
 
 @Slf4j
 @RequiredArgsConstructor(onConstructor = @__(@Inject))

@@ -130,7 +130,7 @@ import net.runelite.client.ui.overlay.components.TextComponent;
 import net.runelite.client.ui.overlay.worldmap.WorldMapPointManager;
 import net.runelite.client.util.ImageUtil;
 import net.runelite.client.util.Text;
-import org.apache.commons.lang3.ArrayUtils;
+import net.runelite.client.util.apache.ArrayUtils;
 
 @PluginDescriptor(
 	name = "Clue Scroll",

@@ -32,8 +32,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import org.apache.commons.text.WordUtils;
-import org.apache.commons.text.similarity.JaroWinklerDistance;
+import net.runelite.client.util.apache.JaroWinklerDistance;
+import net.runelite.client.util.apache.WordUtils;
 
 /**
  * A set of utilities to use when dealing with text.

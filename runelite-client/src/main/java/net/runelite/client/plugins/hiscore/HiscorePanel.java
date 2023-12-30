@@ -68,8 +68,8 @@ import net.runelite.client.hiscore.HiscoreSkill;
 import static net.runelite.client.hiscore.HiscoreSkill.*;
 import net.runelite.client.hiscore.HiscoreSkillType;
 import net.runelite.client.hiscore.Skill;
-import org.apache.commons.lang3.ArrayUtils;
-import org.apache.commons.lang3.StringUtils;
+import net.runelite.client.util.apache.ArrayUtils;
+import net.runelite.client.util.apache.StringUtils;
 
 @Slf4j
 public class HiscorePanel extends PluginPanel

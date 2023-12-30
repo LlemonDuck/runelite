@@ -102,6 +102,8 @@ import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.ClientToolbar;
 import net.runelite.client.ui.NavigationButton;
 import net.runelite.client.util.ColorUtil;
+import net.runelite.client.util.apache.DurationFormatUtils;
+import net.runelite.client.util.apache.FuzzyScore;
 import net.runelite.client.util.ImageUtil;
 import net.runelite.client.util.LinkBrowser;
 import net.runelite.client.util.OSType;
@@ -110,8 +112,6 @@ import net.runelite.client.util.Text;
 import net.runelite.http.api.ge.GrandExchangeTrade;
 import net.runelite.http.api.item.ItemStats;
 import net.runelite.http.api.worlds.WorldType;
-import org.apache.commons.lang3.time.DurationFormatUtils;
-import org.apache.commons.text.similarity.FuzzyScore;
 
 @PluginDescriptor(
 	name = "Grand Exchange",
@@ -204,7 +204,7 @@ public class GrandExchangePlugin extends Plugin
 	private int tradeSeq;
 
 	/**
-	 * Logic from {@link org.apache.commons.text.similarity.FuzzyScore}
+	 * Logic from {@link FuzzyScore}
 	 */
 	@VisibleForTesting
 	static List<Integer> findFuzzyIndices(String term, String query)

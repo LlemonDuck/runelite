@@ -37,7 +37,7 @@ import net.runelite.client.ui.overlay.OverlayPanel;
 import net.runelite.client.ui.overlay.OverlayPosition;
 import net.runelite.client.ui.overlay.components.LineComponent;
 import net.runelite.client.util.QuantityFormatter;
-import static org.apache.commons.lang3.time.DurationFormatUtils.formatDuration;
+import net.runelite.client.util.apache.DurationFormatUtils;
 
 class BlastFurnaceCofferOverlay extends OverlayPanel
 {
@@ -85,7 +85,7 @@ class BlastFurnaceCofferOverlay extends OverlayPanel
 
 				panelComponent.getChildren().add(LineComponent.builder()
 					.left("Time:")
-					.right(formatDuration(millis, "H'h' m'm' s's'", true))
+					.right(DurationFormatUtils.formatDuration(millis, "H'h' m'm' s's'", true))
 					.build());
 			}
 		}

@@ -40,7 +40,7 @@ import net.runelite.api.events.NpcChanged;
 import net.runelite.client.RuntimeConfig;
 import net.runelite.client.eventbus.EventBus;
 import net.runelite.client.eventbus.Subscribe;
-import org.apache.commons.lang3.ArrayUtils;
+import net.runelite.client.util.apache.ArrayUtils;
 
 @Singleton
 public class NpcUtil

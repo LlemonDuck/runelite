@@ -37,9 +37,9 @@ import net.runelite.client.game.ItemManager;
 import net.runelite.client.util.Text;
 import net.runelite.http.api.item.ItemEquipmentStats;
 import net.runelite.http.api.item.ItemStats;
-import org.apache.commons.lang3.StringUtils;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 import org.junit.Before;
 import org.junit.Test;
@@ -142,7 +142,9 @@ public class ItemStatOverlayTest
 		assertTrue(sanitizedTooltip.contains("Stab: +75"));
 		assertTrue(sanitizedTooltip.contains("Slash: +40"));
 		assertTrue(sanitizedTooltip.contains("Crush: -4"));
-		assertEquals(2, StringUtils.countMatches(sanitizedTooltip, "Magic: +1")); // Attack and defense
+		int magicAttackIndex = sanitizedTooltip.indexOf("Magic: +1"); // Attack and defense
+		assertNotEquals(-1, magicAttackIndex);
+		assertNotEquals(-1, sanitizedTooltip.indexOf("Magic: +1", magicAttackIndex + 1));
 		assertTrue(sanitizedTooltip.contains("Melee Str: +75"));
 		assertFalse(sanitizedTooltip.contains("Speed:"));
 

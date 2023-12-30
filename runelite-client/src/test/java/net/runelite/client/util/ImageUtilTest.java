@@ -36,7 +36,7 @@ import java.awt.image.DataBuffer;
 import java.awt.image.DataBufferInt;
 import java.util.Arrays;
 import javax.annotation.Nonnull;
-import org.apache.commons.lang3.ArrayUtils;
+import net.runelite.client.util.apache.ArrayUtils;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;

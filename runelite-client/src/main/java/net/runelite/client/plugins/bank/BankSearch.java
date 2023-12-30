@@ -35,7 +35,7 @@ import net.runelite.api.vars.InputType;
 import net.runelite.api.widgets.ComponentID;
 import net.runelite.api.widgets.Widget;
 import net.runelite.client.callback.ClientThread;
-import org.apache.commons.lang3.ArrayUtils;
+import net.runelite.client.util.apache.ArrayUtils;
 
 @Singleton
 public class BankSearch

@@ -50,7 +50,7 @@ import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.task.Schedule;
-import org.apache.commons.lang3.time.DurationFormatUtils;
+import net.runelite.client.util.apache.DurationFormatUtils;
 
 @PluginDescriptor(
 	name = "Report Button",
