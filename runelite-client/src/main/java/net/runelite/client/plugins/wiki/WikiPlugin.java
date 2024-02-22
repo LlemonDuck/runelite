@@ -60,6 +60,7 @@ import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.game.ItemManager;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
+import net.runelite.client.plugins.wiki.dps.EquipmentWidgetInstaller;
 import net.runelite.client.plugins.wiki.dps.WikiDpsManager;
 import net.runelite.client.ui.JagexColors;
 import net.runelite.client.util.LinkBrowser;
@@ -114,6 +115,7 @@ public class WikiPlugin extends Plugin
 	public void startUp()
 	{
 		clientThread.invokeLater(this::addWidgets);
+		clientThread.invokeLater(() -> EquipmentWidgetInstaller.tryAddButton(client, this.launcher::launch));
 		wikiDpsManager.startUp();
 	}
 
@@ -121,6 +123,7 @@ public class WikiPlugin extends Plugin
 	public void shutDown()
 	{
 		clientThread.invokeLater(this::removeWidgets);
+		clientThread.invokeLater(() -> EquipmentWidgetInstaller.removeButton(client));
 		wikiDpsManager.shutDown();
 	}
 
@@ -151,9 +154,14 @@ public class WikiPlugin extends Plugin
 	@Subscribe
 	private void onWidgetLoaded(WidgetLoaded l)
 	{
-		if (l.getGroupId() == InterfaceID.MINIMAP)
+		int interfaceId= l.getGroupId();
+		if (interfaceId == InterfaceID.MINIMAP)
 		{
 			addWidgets();
+		}
+		else if (interfaceId == InterfaceID.EQUIPMENT || interfaceId == InterfaceID.BANK_EQUIPMENT)
+		{
+			EquipmentWidgetInstaller.addButton(client, screen, this.launcher::launch);
 		}
 	}
 
