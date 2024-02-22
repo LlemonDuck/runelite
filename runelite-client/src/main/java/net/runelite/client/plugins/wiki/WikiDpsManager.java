@@ -1,5 +1,7 @@
 /*
  * Copyright (c) 2024 LlemonDuck
+ * Copyright (c) 2024, Jayden Bailey <jayden@weirdgloop.org>
+ * Copyright (c) 2024, Adam <Adam@sigterm.info>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,7 +30,6 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import java.io.IOException;
-import java.util.concurrent.TimeUnit;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -56,6 +57,8 @@ import net.runelite.client.callback.ClientThread;
 import net.runelite.client.eventbus.EventBus;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.util.LinkBrowser;
+import okhttp3.Call;
+import okhttp3.Callback;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -387,7 +390,7 @@ class WikiDpsManager
 		String data;
 	}
 
-	public void launch()
+	void launch()
 	{
 		JsonObject jsonBody = buildShortlinkData();
 		Request request = new Request.Builder()
@@ -395,24 +398,34 @@ class WikiDpsManager
 			.post(RequestBody.create(MediaType.parse("application/json; charset=utf-8"), jsonBody.toString()))
 			.build();
 
-		OkHttpClient client = okHttpClient.newBuilder()
-			.callTimeout(5, TimeUnit.SECONDS)
-			.build();
-		try (Response response = client.newCall(request).execute())
+		okHttpClient.newCall(request).enqueue(new Callback()
 		{
-			if (response.isSuccessful() && response.body() != null)
+			@Override
+			public void onFailure(Call call, IOException e)
 			{
-				ShortlinkResponse resp = gson.fromJson(response.body().charStream(), ShortlinkResponse.class);
-				LinkBrowser.browse(UI_ENDPOINT + "?id=" + resp.data);
+				log.warn("Failed to create shortlink for DPS calculator", e);
 			}
-			else
+
+			@Override
+			public void onResponse(Call call, Response response)
 			{
-				log.error("Failed to create shortlink for DPS calculator: " + response.code());
+				try // NOPMD: UseTryWithResources
+				{
+					if (response.isSuccessful() && response.body() != null)
+					{
+						ShortlinkResponse resp = gson.fromJson(response.body().charStream(), ShortlinkResponse.class);
+						LinkBrowser.browse(UI_ENDPOINT + "?id=" + resp.data);
+					}
+					else
+					{
+						log.warn("Failed to create shortlink for DPS calculator: http status {}", response.code());
+					}
+				}
+				finally
+				{
+					response.close();
+				}
 			}
-		}
-		catch (IOException ioException)
-		{
-			log.error("Failed to create shortlink for DPS calculator");
-		}
+		});
 	}
 }
