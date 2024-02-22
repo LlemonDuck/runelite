@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package net.runelite.client.plugins.wiki.dps;
+package net.runelite.client.plugins.wiki;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
@@ -64,7 +64,7 @@ import okhttp3.Response;
 
 @Slf4j
 @Singleton
-public class WikiDpsManager
+class WikiDpsManager
 {
 	private static final int[] SPRITE_IDS_INACTIVE = new int[]{
 		SpriteID.DIALOG_BACKGROUND_BRIGHTER,
