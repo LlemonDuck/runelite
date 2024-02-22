@@ -122,6 +122,11 @@ public class DpsLauncher
 		return j;
 	}
 
+	private static class ShortlinkResponse
+	{
+		String data;
+	}
+
 	public void launch()
 	{
 		JsonObject jsonBody = buildShortlinkData();
