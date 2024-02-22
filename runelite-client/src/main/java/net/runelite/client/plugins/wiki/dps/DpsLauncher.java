@@ -56,9 +56,14 @@ public class DpsLauncher
 	private Gson gson;
 
 	@Nullable
-	private JsonObject createEquipmentObject(ItemContainer itemContainer, int slotId) {
+	private JsonObject createEquipmentObject(ItemContainer itemContainer, EquipmentInventorySlot slot)
+	{
+		if (itemContainer == null)
+		{
+			return null;
+		}
 
-		Item item = itemContainer.getItem(slotId);
+		Item item = itemContainer.getItem(slot.getSlotIdx());
 		if (item != null)
 		{
 			JsonObject o = new JsonObject();
@@ -79,17 +84,17 @@ public class DpsLauncher
 		JsonObject l = new JsonObject();
 		JsonObject eq = new JsonObject();
 
-		eq.add("ammo", createEquipmentObject(eqContainer, EquipmentInventorySlot.AMMO.getSlotIdx()));
-		eq.add("body", createEquipmentObject(eqContainer, EquipmentInventorySlot.BODY.getSlotIdx()));
-		eq.add("cape", createEquipmentObject(eqContainer, EquipmentInventorySlot.CAPE.getSlotIdx()));
-		eq.add("feet", createEquipmentObject(eqContainer, EquipmentInventorySlot.BOOTS.getSlotIdx()));
-		eq.add("hands", createEquipmentObject(eqContainer, EquipmentInventorySlot.GLOVES.getSlotIdx()));
-		eq.add("head", createEquipmentObject(eqContainer, EquipmentInventorySlot.HEAD.getSlotIdx()));
-		eq.add("legs", createEquipmentObject(eqContainer, EquipmentInventorySlot.LEGS.getSlotIdx()));
-		eq.add("neck", createEquipmentObject(eqContainer, EquipmentInventorySlot.AMULET.getSlotIdx()));
-		eq.add("ring", createEquipmentObject(eqContainer, EquipmentInventorySlot.RING.getSlotIdx()));
-		eq.add("shield", createEquipmentObject(eqContainer, EquipmentInventorySlot.SHIELD.getSlotIdx()));
-		eq.add("weapon", createEquipmentObject(eqContainer, EquipmentInventorySlot.WEAPON.getSlotIdx()));
+		eq.add("ammo", createEquipmentObject(eqContainer, EquipmentInventorySlot.AMMO);
+		eq.add("body", createEquipmentObject(eqContainer, EquipmentInventorySlot.BODY);
+		eq.add("cape", createEquipmentObject(eqContainer, EquipmentInventorySlot.CAPE);
+		eq.add("feet", createEquipmentObject(eqContainer, EquipmentInventorySlot.BOOTS);
+		eq.add("hands", createEquipmentObject(eqContainer, EquipmentInventorySlot.GLOVES);
+		eq.add("head", createEquipmentObject(eqContainer, EquipmentInventorySlot.HEAD);
+		eq.add("legs", createEquipmentObject(eqContainer, EquipmentInventorySlot.LEGS);
+		eq.add("neck", createEquipmentObject(eqContainer, EquipmentInventorySlot.AMULET);
+		eq.add("ring", createEquipmentObject(eqContainer, EquipmentInventorySlot.RING);
+		eq.add("shield", createEquipmentObject(eqContainer, EquipmentInventorySlot.SHIELD);
+		eq.add("weapon", createEquipmentObject(eqContainer, EquipmentInventorySlot.WEAPON);
 		l.add("equipment", eq);
 
 		JsonObject skills = new JsonObject();
@@ -122,19 +127,22 @@ public class DpsLauncher
 	{
 		JsonObject jsonBody = buildShortlinkData();
 		Request request = new Request.Builder()
-				.url(SHORTLINK_ENDPOINT)
-				.post(RequestBody.create(JSON, jsonBody.toString()))
-				.build();
+			.url(SHORTLINK_ENDPOINT)
+			.post(RequestBody.create(JSON, jsonBody.toString()))
+			.build();
 
 		OkHttpClient client = okHttpClient.newBuilder()
-				.callTimeout(5, TimeUnit.SECONDS)
-				.build();
+			.callTimeout(5, TimeUnit.SECONDS)
+			.build();
 		try (Response response = client.newCall(request).execute())
 		{
-			if (response.isSuccessful() && response.body() != null) {
+			if (response.isSuccessful() && response.body() != null)
+			{
 				ShortlinkResponse resp = gson.fromJson(response.body().charStream(), ShortlinkResponse.class);
 				LinkBrowser.browse(UI_ENDPOINT + "?id=" + resp.data);
-			} else {
+			}
+			else
+			{
 				log.error("Failed to create shortlink for DPS calculator: " + response.code());
 			}
 		}
