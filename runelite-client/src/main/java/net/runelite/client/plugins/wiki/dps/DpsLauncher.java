@@ -83,17 +83,17 @@ public class DpsLauncher
 		JsonObject l = new JsonObject();
 		JsonObject eq = new JsonObject();
 
-		eq.add("ammo", createEquipmentObject(eqContainer, EquipmentInventorySlot.AMMO);
-		eq.add("body", createEquipmentObject(eqContainer, EquipmentInventorySlot.BODY);
-		eq.add("cape", createEquipmentObject(eqContainer, EquipmentInventorySlot.CAPE);
-		eq.add("feet", createEquipmentObject(eqContainer, EquipmentInventorySlot.BOOTS);
-		eq.add("hands", createEquipmentObject(eqContainer, EquipmentInventorySlot.GLOVES);
-		eq.add("head", createEquipmentObject(eqContainer, EquipmentInventorySlot.HEAD);
-		eq.add("legs", createEquipmentObject(eqContainer, EquipmentInventorySlot.LEGS);
-		eq.add("neck", createEquipmentObject(eqContainer, EquipmentInventorySlot.AMULET);
-		eq.add("ring", createEquipmentObject(eqContainer, EquipmentInventorySlot.RING);
-		eq.add("shield", createEquipmentObject(eqContainer, EquipmentInventorySlot.SHIELD);
-		eq.add("weapon", createEquipmentObject(eqContainer, EquipmentInventorySlot.WEAPON);
+		eq.add("ammo", createEquipmentObject(eqContainer, EquipmentInventorySlot.AMMO));
+		eq.add("body", createEquipmentObject(eqContainer, EquipmentInventorySlot.BODY));
+		eq.add("cape", createEquipmentObject(eqContainer, EquipmentInventorySlot.CAPE));
+		eq.add("feet", createEquipmentObject(eqContainer, EquipmentInventorySlot.BOOTS));
+		eq.add("hands", createEquipmentObject(eqContainer, EquipmentInventorySlot.GLOVES));
+		eq.add("head", createEquipmentObject(eqContainer, EquipmentInventorySlot.HEAD));
+		eq.add("legs", createEquipmentObject(eqContainer, EquipmentInventorySlot.LEGS));
+		eq.add("neck", createEquipmentObject(eqContainer, EquipmentInventorySlot.AMULET));
+		eq.add("ring", createEquipmentObject(eqContainer, EquipmentInventorySlot.RING));
+		eq.add("shield", createEquipmentObject(eqContainer, EquipmentInventorySlot.SHIELD));
+		eq.add("weapon", createEquipmentObject(eqContainer, EquipmentInventorySlot.WEAPON));
 		l.add("equipment", eq);
 
 		JsonObject skills = new JsonObject();
