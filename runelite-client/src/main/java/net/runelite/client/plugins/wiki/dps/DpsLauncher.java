@@ -42,7 +42,6 @@ import java.util.concurrent.TimeUnit;
 @Singleton
 public class DpsLauncher
 {
-	private static final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
 	private static final String UI_ENDPOINT = "https://tools.runescape.wiki/osrs-dps/";
 	private static final String SHORTLINK_ENDPOINT = "https://tools.runescape.wiki/osrs-dps/shortlink";
 
@@ -128,7 +127,7 @@ public class DpsLauncher
 		JsonObject jsonBody = buildShortlinkData();
 		Request request = new Request.Builder()
 			.url(SHORTLINK_ENDPOINT)
-			.post(RequestBody.create(JSON, jsonBody.toString()))
+			.post(RequestBody.create(MediaType.parse("application/json; charset=utf-8"), jsonBody.toString()))
 			.build();
 
 		OkHttpClient client = okHttpClient.newBuilder()
