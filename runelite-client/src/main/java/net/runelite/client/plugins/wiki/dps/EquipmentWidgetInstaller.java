@@ -29,7 +29,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.experimental.UtilityClass;
 import net.runelite.api.Client;
 import net.runelite.api.SpriteID;
+import net.runelite.api.annotations.Component;
 import net.runelite.api.annotations.Interface;
+import net.runelite.api.widgets.ComponentID;
+import net.runelite.api.widgets.InterfaceID;
 import net.runelite.api.widgets.JavaScriptCallback;
 import net.runelite.api.widgets.Widget;
 import net.runelite.api.widgets.WidgetType;
@@ -37,7 +40,6 @@ import net.runelite.api.widgets.WidgetType;
 @UtilityClass
 class EquipmentWidgetInstaller
 {
-
 	private static final int[] SPRITE_IDS_INACTIVE = new int[]{
 		SpriteID.DIALOG_BACKGROUND_BRIGHTER,
 		SpriteID.WORLD_MAP_BUTTON_METAL_CORNER_TOP_LEFT,
@@ -69,22 +71,24 @@ class EquipmentWidgetInstaller
 	@RequiredArgsConstructor
 	enum Screen
 	{
-
-		EQUIPMENT_BONUSES(84, 1, 43, 48, 55),
-		BANK_EQUIPMENT(12, 69, 109, 121, 49),
+		EQUIPMENT_BONUSES(InterfaceID.EQUIPMENT_BONUSES, ComponentID.EQUIPMENT_BONUSES_PARENT, ComponentID.EQUIPMENT_BONUSES_SET_BONUS, ComponentID.EQUIPMENT_BONUSES_STAT_BONUS, 55),
+		BANK_EQUIPMENT(InterfaceID.BANK_EQUIPMENT, ComponentID.BANK_EQUIPMENT_PARENT, ComponentID.BANK_EQUIPMENT_SET_BONUS, ComponentID.BANK_EQUIPMENT_STAT_BONUS, 49),
 		;
 
-		/** group containing all the relevant widgets */
+		/** interface containing all the relevant widgets */
 		@Getter(onMethod_ = @Interface)
-		private final int groupId;
+		private final int interfaceId;
 
 		/** parent widget of the interface, install target */
+		@Getter(onMethod_ = @Component)
 		private final int parentId;
 
 		/** the "Set Bonus" button widget layer */
+		@Getter(onMethod_ = @Component)
 		private final int setBonusId;
 
 		/** the "Stat Bonus" button widget layer, which replaces "Set Bonus" after it is clicked */
+		@Getter(onMethod_ = @Component)
 		private final int statBonusId;
 
 		/** OriginalX for Set Bonus and Stat Bonus, prior to us moving them around (for shutdown) **/
@@ -106,9 +110,9 @@ class EquipmentWidgetInstaller
 	 */
 	void addButton(Client client, Screen screen, Runnable onClick)
 	{
-		Widget parent = client.getWidget(screen.getGroupId(), screen.getParentId());
-		Widget setBonus = client.getWidget(screen.getGroupId(), screen.getSetBonusId());
-		Widget statBonus = client.getWidget(screen.getGroupId(), screen.getStatBonusId());
+		Widget parent = client.getWidget(screen.getParentId());
+		Widget setBonus = client.getWidget(screen.getSetBonusId());
+		Widget statBonus = client.getWidget(screen.getStatBonusId());
 		Widget[] refComponents;
 		if (parent == null || setBonus == null || statBonus == null || (refComponents = setBonus.getChildren()) == null)
 		{
@@ -201,21 +205,21 @@ class EquipmentWidgetInstaller
 	{
 		for (Screen screen : Screen.values())
 		{
-			Widget parent = client.getWidget(screen.getGroupId(), screen.getParentId());
+			Widget parent = client.getWidget(screen.getParentId());
 			if (parent != null)
 			{
 				parent.deleteAllChildren();
 				parent.revalidate();
 			}
 
-			Widget setBonus = client.getWidget(screen.getGroupId(), screen.getSetBonusId());
+			Widget setBonus = client.getWidget(screen.getSetBonusId());
 			if (setBonus != null)
 			{
 				setBonus.setOriginalX(screen.getOriginalX())
 					.revalidate();
 			}
 
-			Widget statBonus = client.getWidget(screen.getGroupId(), screen.getStatBonusId());
+			Widget statBonus = client.getWidget(screen.getStatBonusId());
 			if (statBonus != null)
 			{
 				statBonus.setOriginalX(screen.getOriginalX())

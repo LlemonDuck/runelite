@@ -76,7 +76,7 @@ public class WikiDpsManager
 	{
 		for (EquipmentWidgetInstaller.Screen screen : EquipmentWidgetInstaller.Screen.values())
 		{
-			if (ev.getGroupId() == screen.getGroupId())
+			if (ev.getGroupId() == screen.getInterfaceId())
 			{
 				EquipmentWidgetInstaller.addButton(client, screen, this.launcher::launch);
 				break;
