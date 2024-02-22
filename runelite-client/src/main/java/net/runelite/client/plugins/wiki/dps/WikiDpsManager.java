@@ -24,13 +24,26 @@
  */
 package net.runelite.client.plugins.wiki.dps;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import java.io.IOException;
+import java.util.concurrent.TimeUnit;
+import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.inject.Singleton;
-
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
+import net.runelite.api.EquipmentInventorySlot;
+import net.runelite.api.InventoryID;
+import net.runelite.api.Item;
+import net.runelite.api.ItemContainer;
+import net.runelite.api.Skill;
 import net.runelite.api.SpriteID;
+import net.runelite.api.VarPlayer;
+import net.runelite.api.Varbits;
 import net.runelite.api.annotations.Component;
 import net.runelite.api.annotations.Interface;
 import net.runelite.api.events.WidgetLoaded;
@@ -42,7 +55,14 @@ import net.runelite.api.widgets.WidgetType;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.eventbus.EventBus;
 import net.runelite.client.eventbus.Subscribe;
+import net.runelite.client.util.LinkBrowser;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 
+@Slf4j
 @Singleton
 public class WikiDpsManager
 {
@@ -73,31 +93,35 @@ public class WikiDpsManager
 	private static final int FONT_COLOUR_INACTIVE = 0xff981f;
 	private static final int FONT_COLOUR_ACTIVE = 0xffffff;
 
+	private static final String UI_ENDPOINT = "https://tools.runescape.wiki/osrs-dps/";
+	private static final String SHORTLINK_ENDPOINT = "https://tools.runescape.wiki/osrs-dps/shortlink";
+
 	private final Client client;
 	private final ClientThread clientThread;
 	private final EventBus eventBus;
-
-	@Getter
-	private final DpsLauncher launcher;
+	private final OkHttpClient okHttpClient;
+	private final Gson gson;
 
 	@Inject
 	private WikiDpsManager(
 		Client client,
 		ClientThread clientThread,
 		EventBus eventBus,
-		DpsLauncher launcher
+		OkHttpClient okHttpClient,
+		Gson gson
 	)
 	{
 		this.client = client;
 		this.clientThread = clientThread;
 		this.eventBus = eventBus;
-		this.launcher = launcher;
+		this.okHttpClient = okHttpClient;
+		this.gson = gson;
 	}
 
 	public void startUp()
 	{
 		eventBus.register(this);
-		clientThread.invokeLater(() -> tryAddButton(client, this.launcher::launch));
+		clientThread.invokeLater(() -> tryAddButton(client, this::launch));
 	}
 
 	public void shutDown()
@@ -113,7 +137,7 @@ public class WikiDpsManager
 		{
 			if (ev.getGroupId() == screen.getInterfaceId())
 			{
-				addButton(client, screen, this.launcher::launch);
+				addButton(client, screen, this::launch);
 				break;
 			}
 		}
@@ -127,23 +151,33 @@ public class WikiDpsManager
 		BANK_EQUIPMENT(InterfaceID.BANK_EQUIPMENT, ComponentID.BANK_EQUIPMENT_PARENT, ComponentID.BANK_EQUIPMENT_SET_BONUS, ComponentID.BANK_EQUIPMENT_STAT_BONUS, 49),
 		;
 
-		/** interface containing all the relevant widgets */
+		/**
+		 * interface containing all the relevant widgets
+		 */
 		@Getter(onMethod_ = @Interface)
 		private final int interfaceId;
 
-		/** parent widget of the interface, install target */
+		/**
+		 * parent widget of the interface, install target
+		 */
 		@Getter(onMethod_ = @Component)
 		private final int parentId;
 
-		/** the "Set Bonus" button widget layer */
+		/**
+		 * the "Set Bonus" button widget layer
+		 */
 		@Getter(onMethod_ = @Component)
 		private final int setBonusId;
 
-		/** the "Stat Bonus" button widget layer, which replaces "Set Bonus" after it is clicked */
+		/**
+		 * the "Stat Bonus" button widget layer, which replaces "Set Bonus" after it is clicked
+		 */
 		@Getter(onMethod_ = @Component)
 		private final int statBonusId;
 
-		/** OriginalX for Set Bonus and Stat Bonus, prior to us moving them around (for shutdown) **/
+		/**
+		 * OriginalX for Set Bonus and Stat Bonus, prior to us moving them around (for shutdown)
+		 **/
 		private final int originalX;
 
 	}
@@ -277,6 +311,108 @@ public class WikiDpsManager
 				statBonus.setOriginalX(screen.getOriginalX())
 					.revalidate();
 			}
+		}
+	}
+
+	@Nullable
+	private JsonObject createEquipmentObject(ItemContainer itemContainer, EquipmentInventorySlot slot)
+	{
+		if (itemContainer == null)
+		{
+			return null;
+		}
+
+		Item item = itemContainer.getItem(slot.getSlotIdx());
+		if (item != null)
+		{
+			JsonObject o = new JsonObject();
+			o.addProperty("id", item.getId());
+			return o;
+		}
+		return null;
+	}
+
+	private JsonObject buildShortlinkData()
+	{
+		JsonObject j = new JsonObject();
+
+		// Build the player's loadout data
+		JsonArray loadouts = new JsonArray();
+		ItemContainer eqContainer = client.getItemContainer(InventoryID.EQUIPMENT);
+
+		JsonObject l = new JsonObject();
+		JsonObject eq = new JsonObject();
+
+		eq.add("ammo", createEquipmentObject(eqContainer, EquipmentInventorySlot.AMMO));
+		eq.add("body", createEquipmentObject(eqContainer, EquipmentInventorySlot.BODY));
+		eq.add("cape", createEquipmentObject(eqContainer, EquipmentInventorySlot.CAPE));
+		eq.add("feet", createEquipmentObject(eqContainer, EquipmentInventorySlot.BOOTS));
+		eq.add("hands", createEquipmentObject(eqContainer, EquipmentInventorySlot.GLOVES));
+		eq.add("head", createEquipmentObject(eqContainer, EquipmentInventorySlot.HEAD));
+		eq.add("legs", createEquipmentObject(eqContainer, EquipmentInventorySlot.LEGS));
+		eq.add("neck", createEquipmentObject(eqContainer, EquipmentInventorySlot.AMULET));
+		eq.add("ring", createEquipmentObject(eqContainer, EquipmentInventorySlot.RING));
+		eq.add("shield", createEquipmentObject(eqContainer, EquipmentInventorySlot.SHIELD));
+		eq.add("weapon", createEquipmentObject(eqContainer, EquipmentInventorySlot.WEAPON));
+		l.add("equipment", eq);
+
+		JsonObject skills = new JsonObject();
+		skills.addProperty("atk", client.getRealSkillLevel(Skill.ATTACK));
+		skills.addProperty("def", client.getRealSkillLevel(Skill.DEFENCE));
+		skills.addProperty("hp", client.getRealSkillLevel(Skill.HITPOINTS));
+		skills.addProperty("magic", client.getRealSkillLevel(Skill.MAGIC));
+		skills.addProperty("mining", client.getRealSkillLevel(Skill.MINING));
+		skills.addProperty("prayer", client.getRealSkillLevel(Skill.PRAYER));
+		skills.addProperty("ranged", client.getRealSkillLevel(Skill.RANGED));
+		skills.addProperty("str", client.getRealSkillLevel(Skill.STRENGTH));
+		l.add("skills", skills);
+
+		JsonObject buffs = new JsonObject();
+		buffs.addProperty("inWilderness", client.getVarbitValue(Varbits.IN_WILDERNESS) == 1);
+		buffs.addProperty("kandarinDiary", client.getVarbitValue(Varbits.DIARY_KANDARIN_HARD) == 1);
+		buffs.addProperty("onSlayerTask", client.getVarpValue(VarPlayer.SLAYER_TASK_SIZE) > 0);
+		buffs.addProperty("chargeSpell", client.getVarpValue(VarPlayer.CHARGE_GOD_SPELL) > 0);
+		l.add("buffs", buffs);
+
+		l.addProperty("name", client.getLocalPlayer().getName());
+
+		loadouts.add(l);
+		j.add("loadouts", loadouts);
+
+		return j;
+	}
+
+	private static class ShortlinkResponse
+	{
+		String data;
+	}
+
+	public void launch()
+	{
+		JsonObject jsonBody = buildShortlinkData();
+		Request request = new Request.Builder()
+			.url(SHORTLINK_ENDPOINT)
+			.post(RequestBody.create(MediaType.parse("application/json; charset=utf-8"), jsonBody.toString()))
+			.build();
+
+		OkHttpClient client = okHttpClient.newBuilder()
+			.callTimeout(5, TimeUnit.SECONDS)
+			.build();
+		try (Response response = client.newCall(request).execute())
+		{
+			if (response.isSuccessful() && response.body() != null)
+			{
+				ShortlinkResponse resp = gson.fromJson(response.body().charStream(), ShortlinkResponse.class);
+				LinkBrowser.browse(UI_ENDPOINT + "?id=" + resp.data);
+			}
+			else
+			{
+				log.error("Failed to create shortlink for DPS calculator: " + response.code());
+			}
+		}
+		catch (IOException ioException)
+		{
+			log.error("Failed to create shortlink for DPS calculator");
 		}
 	}
 }
