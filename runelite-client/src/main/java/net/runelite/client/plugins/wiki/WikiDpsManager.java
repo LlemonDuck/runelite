@@ -199,95 +199,98 @@ class WikiDpsManager
 	 */
 	void addButton(Client client, Screen screen, Runnable onClick)
 	{
-		Widget parent = client.getWidget(screen.getParentId());
-		Widget setBonus = client.getWidget(screen.getSetBonusId());
-		Widget statBonus = client.getWidget(screen.getStatBonusId());
-		Widget[] refComponents;
-		if (parent == null || setBonus == null || statBonus == null || (refComponents = setBonus.getChildren()) == null)
+		clientThread.invokeLater(() ->
 		{
-			return;
-		}
-
-		// Since the Set Bonus button uses absolute positioning,
-		// we must also use absolute for all the children below,
-		// which means it's necessary to offset the values by simulating corresponding pos/size modes.
-		int padding = 8;
-		int w = setBonus.getOriginalWidth();
-		int h = setBonus.getOriginalHeight();
-		int x = setBonus.getOriginalX() + (w / 2) + (padding / 2);
-		int y = setBonus.getOriginalY();
-		if (screen == Screen.BANK_EQUIPMENT) // uses ABSOLUTE_CENTER
-		{
-			y += parent.getHeight() / 2 - setBonus.getHeight() / 2;
-		}
-
-		// now shift the Set Bonus and Stat Bonus buttons over a bit to make room
-		setBonus.setOriginalX(setBonus.getOriginalX() - (w / 2) - (padding / 2))
-			.revalidate();
-		statBonus.setOriginalX(statBonus.getOriginalX() - (w / 2) - (padding / 2))
-			.revalidate();
-
-		final Widget[] spriteWidgets = new Widget[9];
-
-		// the background uses ABSOLUTE_CENTER and MINUS sizing
-		int bgWidth = w - refComponents[0].getOriginalWidth();
-		int bgHeight = h - refComponents[0].getOriginalHeight();
-		int bgX = (x + refComponents[0].getOriginalX()) + (w - bgWidth) / 2;
-		int bgY = (y + refComponents[0].getOriginalY()) + (h - bgHeight) / 2;
-		spriteWidgets[0] = parent.createChild(-1, WidgetType.GRAPHIC)
-			.setSpriteId(refComponents[0].getSpriteId())
-			.setPos(bgX, bgY)
-			.setSize(bgWidth, bgHeight);
-		spriteWidgets[0].revalidate();
-
-		// borders and corners all use absolute positioning which is easy
-		for (int i = 1; i < 9; i++)
-		{
-			spriteWidgets[i] = parent.createChild(-1, WidgetType.GRAPHIC)
-				.setSpriteId(refComponents[i].getSpriteId())
-				.setPos(x + refComponents[i].getOriginalX(), y + refComponents[i].getOriginalY())
-				.setSize(refComponents[i].getOriginalWidth(), refComponents[i].getOriginalHeight());
-			spriteWidgets[i].revalidate();
-		}
-
-		// text label uses ABSOLUTE_CENTER positioning and MINUS sizing,
-		// but matches size of parent so effectively no-op
-		final Widget text = parent.createChild(-1, WidgetType.TEXT)
-			.setText("View DPS")
-			.setTextColor(FONT_COLOUR_INACTIVE)
-			.setFontId(refComponents[9].getFontId())
-			.setTextShadowed(refComponents[9].getTextShadowed())
-			.setXTextAlignment(refComponents[9].getXTextAlignment())
-			.setYTextAlignment(refComponents[9].getYTextAlignment())
-			.setPos(x, y)
-			.setSize(w, h);
-		text.revalidate();
-
-		// we'll give the text layer the listeners since it covers the whole area
-		text.setHasListener(true);
-		text.setOnMouseOverListener((JavaScriptCallback) ev ->
-		{
-			for (int i = 0; i <= 8; i++)
+			Widget parent = client.getWidget(screen.getParentId());
+			Widget setBonus = client.getWidget(screen.getSetBonusId());
+			Widget statBonus = client.getWidget(screen.getStatBonusId());
+			Widget[] refComponents;
+			if (parent == null || setBonus == null || statBonus == null || (refComponents = setBonus.getChildren()) == null)
 			{
-				spriteWidgets[i].setSpriteId(SPRITE_IDS_ACTIVE[i]);
+				return;
 			}
-			text.setTextColor(FONT_COLOUR_ACTIVE);
-		});
-		text.setOnMouseLeaveListener((JavaScriptCallback) ev ->
-		{
-			for (int i = 0; i <= 8; i++)
+
+			// Since the Set Bonus button uses absolute positioning,
+			// we must also use absolute for all the children below,
+			// which means it's necessary to offset the values by simulating corresponding pos/size modes.
+			int padding = 8;
+			int w = setBonus.getOriginalWidth();
+			int h = setBonus.getOriginalHeight();
+			int x = setBonus.getOriginalX() + (w / 2) + (padding / 2);
+			int y = setBonus.getOriginalY();
+			if (screen == Screen.BANK_EQUIPMENT) // uses ABSOLUTE_CENTER
 			{
-				spriteWidgets[i].setSpriteId(SPRITE_IDS_INACTIVE[i]);
+				y += parent.getHeight() / 2 - setBonus.getHeight() / 2;
 			}
-			text.setTextColor(FONT_COLOUR_INACTIVE);
+
+			// now shift the Set Bonus and Stat Bonus buttons over a bit to make room
+			setBonus.setOriginalX(setBonus.getOriginalX() - (w / 2) - (padding / 2))
+				.revalidate();
+			statBonus.setOriginalX(statBonus.getOriginalX() - (w / 2) - (padding / 2))
+				.revalidate();
+
+			final Widget[] spriteWidgets = new Widget[9];
+
+			// the background uses ABSOLUTE_CENTER and MINUS sizing
+			int bgWidth = w - refComponents[0].getOriginalWidth();
+			int bgHeight = h - refComponents[0].getOriginalHeight();
+			int bgX = (x + refComponents[0].getOriginalX()) + (w - bgWidth) / 2;
+			int bgY = (y + refComponents[0].getOriginalY()) + (h - bgHeight) / 2;
+			spriteWidgets[0] = parent.createChild(-1, WidgetType.GRAPHIC)
+				.setSpriteId(refComponents[0].getSpriteId())
+				.setPos(bgX, bgY)
+				.setSize(bgWidth, bgHeight);
+			spriteWidgets[0].revalidate();
+
+			// borders and corners all use absolute positioning which is easy
+			for (int i = 1; i < 9; i++)
+			{
+				spriteWidgets[i] = parent.createChild(-1, WidgetType.GRAPHIC)
+					.setSpriteId(refComponents[i].getSpriteId())
+					.setPos(x + refComponents[i].getOriginalX(), y + refComponents[i].getOriginalY())
+					.setSize(refComponents[i].getOriginalWidth(), refComponents[i].getOriginalHeight());
+				spriteWidgets[i].revalidate();
+			}
+
+			// text label uses ABSOLUTE_CENTER positioning and MINUS sizing,
+			// but matches size of parent so effectively no-op
+			final Widget text = parent.createChild(-1, WidgetType.TEXT)
+				.setText("View DPS")
+				.setTextColor(FONT_COLOUR_INACTIVE)
+				.setFontId(refComponents[9].getFontId())
+				.setTextShadowed(refComponents[9].getTextShadowed())
+				.setXTextAlignment(refComponents[9].getXTextAlignment())
+				.setYTextAlignment(refComponents[9].getYTextAlignment())
+				.setPos(x, y)
+				.setSize(w, h);
+			text.revalidate();
+
+			// we'll give the text layer the listeners since it covers the whole area
+			text.setHasListener(true);
+			text.setOnMouseOverListener((JavaScriptCallback) ev ->
+			{
+				for (int i = 0; i <= 8; i++)
+				{
+					spriteWidgets[i].setSpriteId(SPRITE_IDS_ACTIVE[i]);
+				}
+				text.setTextColor(FONT_COLOUR_ACTIVE);
+			});
+			text.setOnMouseLeaveListener((JavaScriptCallback) ev ->
+			{
+				for (int i = 0; i <= 8; i++)
+				{
+					spriteWidgets[i].setSpriteId(SPRITE_IDS_INACTIVE[i]);
+				}
+				text.setTextColor(FONT_COLOUR_INACTIVE);
+			});
+
+			// register a click listener
+			text.setAction(0, "View DPS on OSRS Wiki");
+			text.setOnOpListener((JavaScriptCallback) ev -> onClick.run());
+
+			// recompute locations / sizes on parent
+			parent.revalidate();
 		});
-
-		// register a click listener
-		text.setAction(0, "View DPS on OSRS Wiki");
-		text.setOnOpListener((JavaScriptCallback) ev -> onClick.run());
-
-		// recompute locations / sizes on parent
-		parent.revalidate();
 	}
 
 	void removeButton(Client client)
