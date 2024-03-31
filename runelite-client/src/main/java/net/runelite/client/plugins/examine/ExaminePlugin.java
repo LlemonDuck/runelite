@@ -33,9 +33,11 @@ import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
 import net.runelite.api.ItemComposition;
 import net.runelite.api.ItemID;
+import net.runelite.api.VarPlayer;
 import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.MenuOptionClicked;
+import net.runelite.api.widgets.ComponentID;
 import net.runelite.api.widgets.InterfaceID;
 import net.runelite.api.widgets.Widget;
 import net.runelite.api.widgets.WidgetUtil;
@@ -92,7 +94,16 @@ public class ExaminePlugin extends Plugin
 				break;
 			case CC_OP_LOW_PRIORITY:
 			{
-				type = ChatMessageType.ITEM_EXAMINE; // these are spoofed by us from a [proc,examine_item] script edit
+				if (event.getParam1() == ComponentID.EQUIPMENT_DIZANAS_QUIVER_ITEM_CONTAINER)
+				{
+					// dizana's quiver sends a static "The arrows inside Dizana's quiver." gamemessage instead of a real examine
+					type = ChatMessageType.GAMEMESSAGE;
+				}
+				else
+				{
+					type = ChatMessageType.ITEM_EXAMINE; // these are spoofed by us from a [proc,examine_item] script edit
+				}
+
 				int[] qi = findItemFromWidget(event.getParam1(), event.getParam0());
 				if (qi == null)
 				{
@@ -153,6 +164,16 @@ public class ExaminePlugin extends Plugin
 			return null;
 		}
 
+		if (widget.getId() == ComponentID.EQUIPMENT_DIZANAS_QUIVER_ITEM_CONTAINER)
+		{
+			final int count = client.getVarpValue(VarPlayer.DIZANAS_QUIVER_ITEM_COUNT);
+			final int id = client.getVarpValue(VarPlayer.DIZANAS_QUIVER_ITEM_ID);
+			if (count == 0 || id == -1)
+			{
+				return null;
+			}
+			return new int[]{count, id};
+		}
 		if (InterfaceID.EQUIPMENT == widgetGroup)
 		{
 			Widget widgetItem = widget.getChild(1);
