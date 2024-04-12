@@ -81,6 +81,7 @@ import net.runelite.client.externalplugins.ExternalPluginManager;
 import net.runelite.client.plugins.PluginManager;
 import net.runelite.client.rs.ClientLoader;
 import net.runelite.client.rs.ClientUpdateCheckMode;
+import net.runelite.client.time.RSClock;
 import net.runelite.client.ui.ClientUI;
 import net.runelite.client.ui.FatalErrorDialog;
 import net.runelite.client.ui.SplashScreen;
@@ -134,6 +135,9 @@ public class RuneLite
 
 	@Inject
 	private ClientSessionManager clientSessionManager;
+
+	@Inject
+	private RSClock rsClock;
 
 	@Inject
 	private ClientUI clientUI;
@@ -359,6 +363,9 @@ public class RuneLite
 		// Start client session
 		clientSessionManager.start();
 		eventBus.register(clientSessionManager);
+
+		// Start RSClock ticker
+		eventBus.register(rsClock);
 
 		SplashScreen.stage(.75, null, "Starting core interface");
 

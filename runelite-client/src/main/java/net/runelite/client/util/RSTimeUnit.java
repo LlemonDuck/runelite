@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2020, Jordan Atwood <jordan.atwood423@gmail.com>
+ * Copyright (c) 2024, LlemonDuck <napkinorton@gmail.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,7 +31,11 @@ import java.time.temporal.TemporalUnit;
 import lombok.Getter;
 import net.runelite.api.Constants;
 
+/**
+ * @deprecated use {@link net.runelite.client.time.RSTimeUnit} instead.
+ */
 @Getter
+@Deprecated
 public enum RSTimeUnit implements TemporalUnit
 {
 	CLIENT_TICKS("Client tick", Duration.ofMillis(Constants.CLIENT_TICK_LENGTH)),
