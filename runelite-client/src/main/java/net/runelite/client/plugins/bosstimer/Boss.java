@@ -75,25 +75,34 @@ enum Boss
 	// but we still want the respawn timer to show when it despawns.
 	ARAXXOR(NpcID.ARAXXOR_13669, 15, RSTimeUnit.GAME_TICKS, ItemID.NID, true),
 	AMOXLIATL(NpcID.AMOXLIATL, 28, RSTimeUnit.GAME_TICKS, ItemID.MOXI),
+	HUEYCOATL(NpcID.THE_HUEYCOATL, 50, RSTimeUnit.GAME_TICKS, ItemID.HUBERTE, false, NpcID.THE_HUEYCOATL_14012),
 	;
 
 	private static final Map<Integer, Boss> bosses;
+	private static final Map<Integer, Boss> deaths;
 
 	private final int id;
 	private final Duration spawnTime;
 	private final int itemSpriteId;
 	private final boolean ignoreDead;
+	private final int deathId; // npcs that transform into another npc id for "death" instead of despawning (e.g. hueycoatl)
 
 	static
 	{
 		ImmutableMap.Builder<Integer, Boss> builder = new ImmutableMap.Builder<>();
+		ImmutableMap.Builder<Integer, Boss> deathBuilder = new ImmutableMap.Builder<>();
 
 		for (Boss boss : values())
 		{
 			builder.put(boss.getId(), boss);
+			if (boss.getDeathId() != -1)
+			{
+				deathBuilder.put(boss.getDeathId(), boss);
+			}
 		}
 
 		bosses = builder.build();
+		deaths = builder.build();
 	}
 
 	Boss(int id, long period, TemporalUnit unit, int itemSpriteId)
@@ -103,14 +112,25 @@ enum Boss
 
 	Boss(int id, long period, TemporalUnit unit, int itemSpriteId, boolean ignoreDead)
 	{
+		this(id, period, unit, itemSpriteId, ignoreDead, -1);
+	}
+
+	Boss(int id, long period, TemporalUnit unit, int itemSpriteId, boolean ignoreDead, int deathId)
+	{
 		this.id = id;
 		this.spawnTime = Duration.of(period, unit);
 		this.itemSpriteId = itemSpriteId;
 		this.ignoreDead = ignoreDead;
+		this.deathId = deathId;
 	}
 
 	static Boss find(int id)
 	{
 		return bosses.get(id);
+	}
+
+	static Boss findByDeathId(int id)
+	{
+		return deaths.get(id);
 	}
 }
