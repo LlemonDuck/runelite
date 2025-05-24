@@ -37,6 +37,7 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import lombok.Getter;
 import lombok.NonNull;
+import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.MenuAction;
 import net.runelite.api.events.MenuOptionClicked;
@@ -53,11 +54,16 @@ import net.runelite.client.ui.overlay.components.InfoBoxComponent;
 import net.runelite.client.ui.overlay.components.LayoutableRenderableEntity;
 import net.runelite.client.ui.overlay.tooltip.Tooltip;
 import net.runelite.client.ui.overlay.tooltip.TooltipManager;
+import org.slf4j.Marker;
+import org.slf4j.MarkerFactory;
 
+@Slf4j
 public class InfoBoxOverlay extends OverlayPanel
 {
 	private static final int GAP = 1;
 	private static final int DEFAULT_WRAP_COUNT = 4;
+
+	private static final Marker DEDUPLICATE = MarkerFactory.getMarker("DEDUPLICATE");
 
 	private final InfoBoxManager infoboxManager;
 	private final TooltipManager tooltipManager;
@@ -129,28 +135,35 @@ public class InfoBoxOverlay extends OverlayPanel
 		final Dimension preferredSize = new Dimension(config.infoBoxSize(), config.infoBoxSize());
 		for (InfoBox box : infoBoxes)
 		{
-			if (!box.render())
+			try
 			{
-				continue;
+				if (!box.render())
+				{
+					continue;
+				}
+
+				final String text = box.getText();
+				final Color color = box.getTextColor();
+
+				final InfoBoxComponent infoBoxComponent = new InfoBoxComponent();
+				infoBoxComponent.setText(text);
+				infoBoxComponent.setFont(font);
+				if (color != null)
+				{
+					infoBoxComponent.setColor(color);
+				}
+				infoBoxComponent.setOutline(infoBoxTextOutline);
+				infoBoxComponent.setImage(box.getScaledImage());
+				infoBoxComponent.setTooltip(box.getTooltip());
+				infoBoxComponent.setPreferredSize(preferredSize);
+				infoBoxComponent.setBackgroundColor(overlayBackgroundColor);
+				infoBoxComponent.setInfoBox(box);
+				panelComponent.getChildren().add(infoBoxComponent);
 			}
-
-			final String text = box.getText();
-			final Color color = box.getTextColor();
-
-			final InfoBoxComponent infoBoxComponent = new InfoBoxComponent();
-			infoBoxComponent.setText(text);
-			infoBoxComponent.setFont(font);
-			if (color != null)
+			catch (Exception e)
 			{
-				infoBoxComponent.setColor(color);
+				log.warn(DEDUPLICATE, "Uncaught exception in infobox render", e);
 			}
-			infoBoxComponent.setOutline(infoBoxTextOutline);
-			infoBoxComponent.setImage(box.getScaledImage());
-			infoBoxComponent.setTooltip(box.getTooltip());
-			infoBoxComponent.setPreferredSize(preferredSize);
-			infoBoxComponent.setBackgroundColor(overlayBackgroundColor);
-			infoBoxComponent.setInfoBox(box);
-			panelComponent.getChildren().add(infoBoxComponent);
 		}
 
 		final Dimension dimension = super.render(graphics);
