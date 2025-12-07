@@ -66,6 +66,7 @@ dependencies {
     api(variantOf(libs.guice.core) { classifier("no_aop") })
     api(libs.gson)
     implementation(libs.flatlaf.core)
+    implementation(libs.flatlaf.extras) // todo needed?
     implementation(libs.commons.text)
     implementation(libs.jna.core)
     implementation(libs.jna.platform)
