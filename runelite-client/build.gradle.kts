@@ -27,6 +27,7 @@ import java.io.ByteArrayOutputStream
 
 plugins {
     java
+    `java-library`
     `maven-publish`
     pmd
     alias(libs.plugins.lombok)
@@ -44,26 +45,26 @@ java {
 }
 
 dependencies {
-    implementation("net.runelite:runelite-api:${project.version}")
+    api("net.runelite:runelite-api:${project.version}")
     implementation("net.runelite:jshell:${project.version}")
     implementation("net.runelite:injected-client:${project.version}")
 
-    implementation(libs.rl.http.api)
+    api(libs.rl.http.api)
     implementation(libs.rl.discord)
     implementation(libs.rl.awt)
     compileOnly(libs.rl.orange)
 
-    implementation(libs.slf4j.api)
+    api(libs.slf4j.api)
     implementation(libs.logback.classic)
     implementation(libs.jopt)
-    implementation(libs.guava) {
+    api(libs.guava) {
         exclude("com.google.code.findbugs", "jsr305")
         exclude("com.google.errorprone", "error_prone_annotations")
         exclude("com.google.j2objc", "j2objc-annotations")
         exclude("org.codehaus.mojo", "animal-sniffer-annotations")
     }
-    implementation(variantOf(libs.guice.core) { classifier("no_aop") })
-    implementation(libs.gson)
+    api(variantOf(libs.guice.core) { classifier("no_aop") })
+    api(libs.gson)
     implementation(libs.flatlaf.core)
     implementation(libs.flatlaf.extras) // todo needed?
     implementation(libs.commons.text)
@@ -72,9 +73,9 @@ dependencies {
     implementation(libs.findbugs)
     compileOnly(libs.jetbrains.annotations)
     implementation(libs.protobuf)
-    implementation(libs.lwjgl.core)
-    implementation(libs.lwjgl.opengl)
-    implementation(libs.lwjgl.opencl)
+    api(libs.lwjgl.core)
+    api(libs.lwjgl.opengl)
+    api(libs.lwjgl.opencl)
 
     for (platform in listOf(
         "linux",
