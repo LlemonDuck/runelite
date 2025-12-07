@@ -42,7 +42,7 @@ dependencies {
 
     implementation(libs.guava)
     implementation(libs.slf4j.api)
-    implementation(libs.slf4j.simple)
+    runtimeOnly(libs.slf4j.simple)
     implementation(libs.commons.compress)
     implementation(libs.gson)
     runtimeOnly(libs.antlr) // todo needed?

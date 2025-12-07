@@ -47,7 +47,7 @@ java {
 dependencies {
     api("net.runelite:runelite-api:${project.version}")
     implementation("net.runelite:jshell:${project.version}")
-    implementation("net.runelite:injected-client:${project.version}")
+    runtimeOnly("net.runelite:injected-client:${project.version}")
 
     api(libs.rl.http.api)
     implementation(libs.rl.discord)
@@ -63,7 +63,9 @@ dependencies {
         exclude("com.google.j2objc", "j2objc-annotations")
         exclude("org.codehaus.mojo", "animal-sniffer-annotations")
     }
-    api(variantOf(libs.guice.core) { classifier("no_aop") })
+    api(variantOf(libs.guice.core) { classifier("no_aop") }) {
+        exclude("com.google.guava", "guava")
+    }
     api(libs.gson)
     implementation(libs.flatlaf.core)
     implementation(libs.flatlaf.extras)
@@ -92,8 +94,12 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.hamcrest)
     testImplementation(libs.mockito)
-    testImplementation(libs.guice.testlib)
-    testImplementation(libs.guice.grapher)
+    testImplementation(libs.guice.testlib) {
+        exclude("com.google.inject", "guice")
+    }
+    testImplementation(libs.guice.grapher) {
+        exclude("com.google.inject", "guice")
+    }
     testImplementation(libs.okhttp.mockserver)
 }
 
