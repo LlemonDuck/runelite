@@ -32,6 +32,9 @@ tasks.register("buildAll") {
 tasks.register("assembleAll") {
     gradle.includedBuilds.forEach { build -> this@register.dependsOn(build.task(":assemble")) }
 }
+tasks.register("testAll") {
+    gradle.includedBuilds.forEach { build -> this@register.dependsOn(build.task(":test")) }
+}
 tasks.register("publishAll") {
     this@register.dependsOn(gradle.includedBuild("cache").task(":publish"))
     this@register.dependsOn(gradle.includedBuild("runelite-api").task(":publish"))
