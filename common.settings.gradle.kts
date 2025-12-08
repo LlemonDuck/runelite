@@ -56,21 +56,13 @@ gradle.beforeProject {
     group = rootProps["project.build.group"] as String
     version = rootProps["project.build.version"] as String
 
-    extensions.findByType<JavaPluginExtension>()?.run {
-        toolchain {
-            vendor = JvmVendorSpec.ADOPTIUM
-            languageVersion = JavaLanguageVersion.of(11)
-        }
+    tasks.withType<JavaCompile> {
+        options.encoding = "UTF-8"
+        options.release = 11
     }
 }
 
 gradle.afterProject {
-    // jdk tooling config
-    tasks.withType<JavaCompile> {
-        options.encoding = "UTF-8"
-        sourceCompatibility = "11"
-        targetCompatibility = "11"
-    }
     tasks.withType<Javadoc> {
         (this.options as StandardJavadocDocletOptions).apply {
             quiet()
