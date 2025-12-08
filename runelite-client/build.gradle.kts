@@ -63,9 +63,7 @@ dependencies {
         exclude("com.google.j2objc", "j2objc-annotations")
         exclude("org.codehaus.mojo", "animal-sniffer-annotations")
     }
-    api(variantOf(libs.guice.core) { classifier("no_aop") }) {
-        exclude("com.google.guava", "guava")
-    }
+    api(variantOf(libs.guice.core) { classifier("no_aop") })
     api(libs.gson)
     implementation(libs.flatlaf.core)
     implementation(libs.flatlaf.extras)
@@ -94,12 +92,8 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.hamcrest)
     testImplementation(libs.mockito)
-    testImplementation(libs.guice.testlib) {
-        exclude("com.google.inject", "guice")
-    }
-    testImplementation(libs.guice.grapher) {
-        exclude("com.google.inject", "guice")
-    }
+    testImplementation(libs.guice.testlib)
+    testImplementation(libs.guice.grapher)
     testImplementation(libs.okhttp.mockserver)
 }
 
