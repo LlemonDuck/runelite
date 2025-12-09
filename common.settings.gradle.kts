@@ -26,7 +26,7 @@
 dependencyResolutionManagement {
     repositories {
         maven(uri("https://repo.runelite.net")) {
-            name = "rlMaven"
+            name = "rrn"
 
             content {
                 includeGroupAndSubgroups("net.runelite")
