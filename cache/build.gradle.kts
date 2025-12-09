@@ -38,19 +38,27 @@ java {
 }
 
 dependencies {
-    antlr(libs.antlr)
+    antlr(libs.antlr.core)
+    implementation(libs.antlr.runtime)
 
     implementation(libs.guava)
     implementation(libs.slf4j.api)
     runtimeOnly(libs.slf4j.simple)
     implementation(libs.commons.compress)
     implementation(libs.gson)
-    runtimeOnly(libs.antlr) // todo needed?
     implementation(libs.commons.cli)
     implementation(libs.jna.core)
 
     testImplementation(libs.junit)
     testImplementation(libs.rs.cache)
+}
+
+// the gradle antlr plugin adds all of antlr to runtimeClasspath,
+// workaround that https://github.com/gradle/gradle/issues/820
+configurations {
+    api {
+        setExtendsFrom(extendsFrom.filterNot { it == antlr.get() })
+    }
 }
 
 sourceSets {
