@@ -5,10 +5,7 @@
       <verify-signatures>false</verify-signatures>
       <trusted-artifacts>
          <trust group="net.runelite"/>
-         <trust group="net.runelite.archive-patcher"/>
          <trust group="net.runelite.arn"/>
-         <trust group="net.runelite.jocl"/>
-         <trust group="net.runelite.pushingpixels"/>
          <trust file=".*-javadoc[.]jar" regex="true"/>
          <trust file=".*-sources[.]jar" regex="true"/>
       </trusted-artifacts>
