@@ -14,6 +14,15 @@ jobs:
       GRADLE_OPTS: "-Dfile:encoding=UTF-8"
 
     steps:
+      - name: Cache glslang
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cache/runelite
+          key: ${{ runner.os }}-cache-${{ hashFiles('ci/build.sh') }}
+          restore-keys: |
+            ${{ runner.os }}-cache-
+
       - name: Checkout
         uses: actions/checkout@v4
 
