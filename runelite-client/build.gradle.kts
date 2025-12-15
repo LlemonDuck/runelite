@@ -79,6 +79,7 @@ dependencies {
 
     for (platform in listOf(
         "linux",
+        "linux-arm64",
         "macos",
         "macos-arm64",
         "windows-x86",
