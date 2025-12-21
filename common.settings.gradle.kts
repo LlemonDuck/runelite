@@ -30,7 +30,6 @@ dependencyResolutionManagement {
 
             content {
                 includeGroupAndSubgroups("net.runelite")
-                excludeModule("net.runelite.rs", "vanilla")
             }
         }
         mavenCentral {
