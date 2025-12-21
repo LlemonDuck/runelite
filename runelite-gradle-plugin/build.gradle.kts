@@ -31,7 +31,6 @@ plugins {
 dependencies {
     implementation("net.runelite:cache:${project.version}")
 
-    // todo needed?
     implementation(libs.guava)
     implementation(libs.tomlj)
     implementation(libs.javapoet)

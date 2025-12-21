@@ -84,9 +84,14 @@ gradle.afterProject {
     tasks.withType<GenerateModuleMetadata> { enabled = false }
     extensions.findByType<org.gradle.api.publish.PublishingExtension>()?.run {
         repositories {
-            maven(uri(providers.gradleProperty("rlMavenUrl").getOrElse("https://repo.runelite.net"))) {
-                name = "rlMaven"
-                if (url.scheme != "file") { credentials(PasswordCredentials::class) }
+            maven(uri(providers.gradleProperty("rrnUrl").getOrElse("https://repo.runelite.net"))) {
+                name = "rrn"
+                if (url.scheme != "file") {
+                    credentials(PasswordCredentials::class) {
+                        username = providers.gradleProperty("rrnPublishUsername").orElse(providers.gradleProperty("rrnUsername")).get()
+                        password = providers.gradleProperty("rrnPublishPassword").orElse(providers.gradleProperty("rrnPassword")).get()
+                    }
+                }
             }
         }
     }

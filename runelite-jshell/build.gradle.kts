@@ -43,7 +43,6 @@ dependencies {
     implementation(libs.findbugs)
     implementation(libs.fife.rsyntaxtextarea)
     implementation(libs.fife.autocomplete)
-    implementation(libs.flatlaf.extras)
 }
 
 publishing {

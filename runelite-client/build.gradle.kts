@@ -55,7 +55,9 @@ dependencies {
     compileOnly(libs.rl.orange)
 
     api(libs.slf4j.api)
-    implementation(libs.logback.classic)
+    implementation(libs.logback.classic) {
+        exclude("org.slf4j", "slf4j-api")
+    }
     implementation(libs.jopt)
     api(libs.guava) {
         exclude("com.google.code.findbugs", "jsr305")
