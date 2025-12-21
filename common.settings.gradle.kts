@@ -88,8 +88,8 @@ gradle.afterProject {
                 name = "rrn"
                 if (url.scheme != "file") {
                     credentials(PasswordCredentials::class) {
-                        username = providers.gradleProperty("rrnPublishUsername").orElse(providers.gradleProperty("rrnUsername")).get()
-                        password = providers.gradleProperty("rrnPublishPassword").orElse(providers.gradleProperty("rrnPassword")).get()
+                        username = providers.gradleProperty("rrnPublishUsername").orElse(providers.gradleProperty("rrnUsername")).getOrElse("")
+                        password = providers.gradleProperty("rrnPublishPassword").orElse(providers.gradleProperty("rrnPassword")).getOrElse("")
                     }
                 }
             }
