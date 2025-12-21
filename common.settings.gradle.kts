@@ -98,8 +98,6 @@ gradle.afterProject {
         isReproducibleFileOrder = true
     }
 
-    // this is explicitly needed so that verification metadata
-    // includes the sources and javadocs that intellij defaultly downloads
     extensions.findByType<org.gradle.plugins.ide.idea.model.IdeaModel>()?.run {
         module {
             isDownloadSources = true

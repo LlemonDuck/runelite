@@ -16,10 +16,10 @@ public abstract class JarsignPlugin implements Plugin<Project>
 	{
 		JarsignExtension ext = project.getExtensions()
 			.create(JarsignExtension.class, "jarsign", JarsignExtension.class);
-		ext.getKeystore().convention(toRegularFileProvider(project, propProvider(project, "jarsigner.keystore")));
-		ext.getStorePass().convention(propProvider(project, "jarsigner.storepass"));
-		ext.getKeyPass().convention(propProvider(project, "jarsigner.keypass"));
-		ext.getAlias().convention(propProvider(project, "jarsigner.alias"));
+		ext.getKeystore().convention(toRegularFileProvider(project, propProvider(project, "jarsignerKeystore")));
+		ext.getStorePass().convention(propProvider(project, "jarsignerStorepass"));
+		ext.getKeyPass().convention(propProvider(project, "jarsignerKeypass"));
+		ext.getAlias().convention(propProvider(project, "jarsignerAlias"));
 
 		project.getTasks()
 			.withType(Jar.class, jarTask -> registerSignTask(project, jarTask, ext));

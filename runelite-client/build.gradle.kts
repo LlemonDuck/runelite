@@ -1,5 +1,3 @@
-import java.io.ByteArrayOutputStream
-
 /*
  * Copyright (c) 2024, LlemonDuck <napkinorton@gmail.com>
  * All rights reserved.
@@ -24,6 +22,8 @@ import java.io.ByteArrayOutputStream
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
+import java.io.ByteArrayOutputStream
 
 plugins {
     java
