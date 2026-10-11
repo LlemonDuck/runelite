@@ -24,41 +24,18 @@
  */
 package net.runelite.client.plugins.config;
 
-import com.google.common.primitives.Ints;
-import java.awt.BorderLayout;
-import java.awt.Color;
 import java.awt.Component;
-import java.awt.Dimension;
-import java.awt.event.ItemEvent;
 import java.util.ArrayList;
 import java.util.List;
 import javax.inject.Inject;
 import javax.swing.DefaultListCellRenderer;
-import javax.swing.JButton;
-import javax.swing.JCheckBox;
-import javax.swing.JComboBox;
-import javax.swing.JFormattedTextField;
-import javax.swing.JLabel;
 import javax.swing.JList;
-import javax.swing.JPanel;
-import javax.swing.JScrollPane;
 import javax.swing.JSeparator;
-import javax.swing.JSpinner;
-import javax.swing.ScrollPaneConstants;
-import javax.swing.SpinnerModel;
-import javax.swing.SpinnerNumberModel;
-import javax.swing.border.EmptyBorder;
 import lombok.AllArgsConstructor;
-import net.runelite.client.config.ConfigDescriptor;
-import net.runelite.client.config.ConfigItemDescriptor;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.config.FontType;
-import net.runelite.client.ui.ColorScheme;
-import net.runelite.client.ui.DynamicGridLayout;
 import net.runelite.client.ui.FontManager;
-import net.runelite.client.ui.PluginPanel;
-import net.runelite.client.ui.UnitFormatterFactory;
-import net.runelite.client.util.SwingUtil;
+import net.runelite.client.ui.components.colorpicker.ColorPickerManager;
 
 @AllArgsConstructor
 final class TruncatedListCellRenderer extends DefaultListCellRenderer
@@ -88,134 +65,22 @@ final class TruncatedListCellRenderer extends DefaultListCellRenderer
 	}
 }
 
-class FontPanel extends PluginPanel
+class FontPanel extends ConfigSubPanel<FontType>
 {
-	private final ConfigManager configManager;
-
-	private final JLabel title;
-	private final FixedWidthPanel mainPanel;
-
-	private ConfigDescriptor configDescriptor;
-	private ConfigItemDescriptor configItemDescriptor;
 
 	@Inject
 	private FontPanel(
 		ConfigManager configManager,
-		PluginListPanel pluginList
+		ColorPickerManager colorPickerManager,
+		PluginListPanel pluginListPanel
 	)
 	{
-		super(false);
-
-		this.configManager = configManager;
-
-		setLayout(new BorderLayout());
-		setBackground(ColorScheme.DARK_GRAY_COLOR);
-
-		JPanel topPanel = new JPanel();
-		topPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
-		topPanel.setLayout(new BorderLayout(0, BORDER_OFFSET));
-		add(topPanel, BorderLayout.NORTH);
-
-		mainPanel = new FixedWidthPanel();
-		mainPanel.setBorder(new EmptyBorder(8, 10, 10, 10));
-		mainPanel.setLayout(new DynamicGridLayout(0, 1, 0, 5));
-		mainPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-		JPanel contentsPanel = new FixedWidthPanel();
-		contentsPanel.setLayout(new BorderLayout());
-		contentsPanel.add(mainPanel, BorderLayout.NORTH);
-
-		JScrollPane scrollPane = new JScrollPane(contentsPanel);
-		scrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-		add(scrollPane, BorderLayout.CENTER);
-
-		JButton topPanelBackButton = new JButton(ConfigPanel.BACK_ICON);
-		SwingUtil.removeButtonDecorations(topPanelBackButton);
-		topPanelBackButton.setPreferredSize(new Dimension(22, 0));
-		topPanelBackButton.setBorder(new EmptyBorder(0, 0, 0, 5));
-		topPanelBackButton.addActionListener(e -> pluginList.getMuxer().popState());
-		topPanelBackButton.setToolTipText("Back");
-		topPanel.add(topPanelBackButton, BorderLayout.WEST);
-
-		title = new JLabel();
-		title.setForeground(Color.WHITE);
-		topPanel.add(title, BorderLayout.CENTER);
+		super(configManager, colorPickerManager, pluginListPanel);
 	}
 
-	private void item(String name, String description, Component component)
+	@Override
+	protected void rebuild(FontType fontType)
 	{
-		JPanel item = new JPanel();
-		item.setLayout(new BorderLayout());
-		item.setMinimumSize(new Dimension(PANEL_WIDTH, 0));
-		JLabel configEntryName = new JLabel(name);
-		configEntryName.setForeground(Color.WHITE);
-		if (!"".equals(description))
-		{
-			configEntryName.setToolTipText("<html>" + name + ":<br>" + description + "</html>");
-		}
-		item.add(configEntryName, BorderLayout.CENTER);
-		item.add(component, BorderLayout.EAST);
-		mainPanel.add(item);
-	}
-
-	private JCheckBox checkbox(boolean selected)
-	{
-		JCheckBox checkbox = new JCheckBox();
-		checkbox.setSelected(selected);
-		return checkbox;
-	}
-
-	private <T> JComboBox<T> combobox(T[] options, T value)
-	{
-		JComboBox<T> box = new JComboBox<>(options);
-		// set renderer prior to calling box.getPreferredSize(), since it will invoke the renderer
-		// to build components for each combobox element in order to compute the display size of the
-		// combobox
-		box.setRenderer(new TruncatedListCellRenderer(23));
-		box.setPreferredSize(new Dimension(box.getPreferredSize().width, 22));
-		box.setSelectedItem(value);
-		box.setToolTipText(value.toString());
-
-		box.addItemListener(e ->
-		{
-			if (e.getStateChange() == ItemEvent.SELECTED)
-			{
-				box.setToolTipText(box.getSelectedItem().toString());
-			}
-		});
-
-		return box;
-	}
-
-	private JSpinner createIntSpinner(int min, int max, int value, String unit)
-	{
-		// Config may previously have been out of range
-		value = Ints.constrainToRange(value, min, max);
-
-		SpinnerModel model = new SpinnerNumberModel(value, min, max, 1);
-		JSpinner spinner = new JSpinner(model);
-		Component editor = spinner.getEditor();
-		JFormattedTextField spinnerTextField = ((JSpinner.DefaultEditor) editor).getTextField();
-		spinnerTextField.setColumns(6);
-		spinnerTextField.setFormatterFactory(new UnitFormatterFactory(spinnerTextField.getFormatterFactory(), unit));
-		return spinner;
-	}
-
-	void init(ConfigDescriptor cd, ConfigItemDescriptor cid)
-	{
-		title.setText(cid.name());
-
-		configDescriptor = cd;
-		configItemDescriptor = cid;
-
-		FontType fontType = loadRuneLiteFont();
-		rebuild(fontType);
-	}
-
-	private void rebuild(FontType fontType)
-	{
-		mainPanel.removeAll();
-
 		List<String> fontOptions = new ArrayList<>();
 		fontOptions.addAll(FontManager.getBuiltInFonts());
 		fontOptions.add("---");
@@ -223,49 +88,28 @@ class FontPanel extends PluginPanel
 		fontOptions.add("---");
 		fontOptions.addAll(FontManager.getSystemFonts());
 
-		var comboboxFont = combobox(fontOptions.toArray(), fontType.getFamily());
-		comboboxFont.addItemListener(e ->
-		{
-			if (e.getStateChange() == ItemEvent.SELECTED)
-			{
-				var f = loadRuneLiteFont();
-				saveRuneLiteFont(f.withFamily((String) comboboxFont.getSelectedItem()));
-			}
-		});
-		item("Font", "Configures the font.", comboboxFont);
+		item(
+			"Font",
+			"Configures the font.",
+			createCombobox(fontOptions.toArray(new String[0]), fontType.getFamily(), new TruncatedListCellRenderer(23), FontType::withFamily)
+		);
 
-		var spinnerSize = createIntSpinner(1, Integer.MAX_VALUE, fontType.getSize(), "pt");
-		spinnerSize.addChangeListener(ce ->
-		{
-			var f = loadRuneLiteFont();
-			saveRuneLiteFont(f.withSize((int) spinnerSize.getValue()));
-		});
-		item("Size", "Configures the font size.", spinnerSize);
+		item(
+			"Size",
+			"Configures the font size.",
+			createIntSpinner(1, Integer.MAX_VALUE, fontType.getSize(), "pt", FontType::withSize)
+		);
 
-		var checkboxBold = checkbox(fontType.isBold());
-		checkboxBold.addActionListener(ae ->
-		{
-			var f = loadRuneLiteFont();
-			saveRuneLiteFont(f.withBold(checkboxBold.isSelected()));
-		});
-		item("Bold", "Toggle bold styling for the font.", checkboxBold);
+		item(
+			"Bold",
+			"Toggle bold styling for the font.",
+			createCheckbox(fontType.isBold(), FontType::withBold)
+		);
 
-		var checkboxItalic = checkbox(fontType.isItalic());
-		checkboxItalic.addActionListener(ae ->
-		{
-			var f = loadRuneLiteFont();
-			saveRuneLiteFont(f.withItalic(checkboxItalic.isSelected()));
-		});
-		item("Italic", "Toggle italic styling for the font.", checkboxItalic);
-	}
-
-	private FontType loadRuneLiteFont()
-	{
-		return configManager.getConfiguration(configDescriptor.getGroup().value(), configItemDescriptor.getItem().keyName(), FontType.class);
-	}
-
-	private void saveRuneLiteFont(FontType fontType)
-	{
-		configManager.setConfiguration(configDescriptor.getGroup().value(), configItemDescriptor.getItem().keyName(), fontType);
+		item(
+			"Italic",
+			"Toggle italic styling for the font.",
+			createCheckbox(fontType.isItalic(), FontType::withItalic)
+		);
 	}
 }
