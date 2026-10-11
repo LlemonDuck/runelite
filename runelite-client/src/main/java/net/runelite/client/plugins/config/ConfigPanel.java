@@ -75,6 +75,7 @@ import javax.swing.border.MatteBorder;
 import javax.swing.event.ChangeListener;
 import javax.swing.text.JTextComponent;
 import lombok.extern.slf4j.Slf4j;
+import net.runelite.client.config.ActorHighlight;
 import net.runelite.client.config.ConfigDescriptor;
 import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigItem;
@@ -87,7 +88,9 @@ import net.runelite.client.config.FontType;
 import net.runelite.client.config.Keybind;
 import net.runelite.client.config.ModifierlessKeybind;
 import net.runelite.client.config.Notification;
+import net.runelite.client.config.ObjectHighlight;
 import net.runelite.client.config.Range;
+import net.runelite.client.config.TileHighlight;
 import net.runelite.client.config.Units;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ExternalPluginsChanged;
@@ -143,6 +146,9 @@ class ConfigPanel extends PluginPanel
 	private final ColorPickerManager colorPickerManager;
 	private final Provider<NotificationPanel> notificationPanelProvider;
 	private final Provider<FontPanel> fontPanelProvider;
+	private final Provider<ActorHighlightPanel> highlightPanelProvider;
+	private final Provider<ObjectHighlightPanel> objectHighlightPanelProvider;
+	private final Provider<TileHighlightPanel> tileHighlightPanelProvider;
 
 	private final TitleCaseListCellRenderer listCellRenderer = new TitleCaseListCellRenderer();
 
@@ -160,7 +166,10 @@ class ConfigPanel extends PluginPanel
 		ExternalPluginManager externalPluginManager,
 		ColorPickerManager colorPickerManager,
 		Provider<NotificationPanel> notificationPanelProvider,
-		Provider<FontPanel> fontPanelProvider
+		Provider<FontPanel> fontPanelProvider,
+		Provider<ActorHighlightPanel> highlightPanelProvider,
+		Provider<ObjectHighlightPanel> objectHighlightPanelProvider,
+		Provider<TileHighlightPanel> tileHighlightPanelProvider
 	)
 	{
 		super(false);
@@ -172,6 +181,9 @@ class ConfigPanel extends PluginPanel
 		this.colorPickerManager = colorPickerManager;
 		this.notificationPanelProvider = notificationPanelProvider;
 		this.fontPanelProvider = fontPanelProvider;
+		this.highlightPanelProvider = highlightPanelProvider;
+		this.objectHighlightPanelProvider = objectHighlightPanelProvider;
+		this.tileHighlightPanelProvider = tileHighlightPanelProvider;
 
 		setLayout(new BorderLayout());
 		setBackground(ColorScheme.DARK_GRAY_COLOR);
@@ -397,6 +409,18 @@ class ConfigPanel extends PluginPanel
 			else if (cid.getType() == FontType.class)
 			{
 				item.add(createFont(cd, cid), BorderLayout.EAST);
+			}
+			else if (cid.getType() == ActorHighlight.class)
+			{
+				item.add(createActorHighlight(cd, cid), BorderLayout.EAST);
+			}
+			else if (cid.getType() == ObjectHighlight.class)
+			{
+				item.add(createObjectHighlight(cd, cid), BorderLayout.EAST);
+			}
+			else if (cid.getType() == TileHighlight.class)
+			{
+				item.add(createTileHighlight(cd, cid), BorderLayout.EAST);
 			}
 			else if (cid.getType() instanceof ParameterizedType)
 			{
@@ -729,6 +753,117 @@ class ConfigPanel extends PluginPanel
 		panel.add(button, BorderLayout.WEST);
 
 		button.setVisible(true);
+		return panel;
+	}
+
+	private JPanel createActorHighlight(ConfigDescriptor cd, ConfigItemDescriptor cid)
+	{
+		JPanel panel = new JPanel();
+		panel.setLayout(new BorderLayout());
+
+		JButton button = new JButton(ConfigPanel.CONFIG_ICON);
+		SwingUtil.removeButtonDecorations(button);
+		button.setPreferredSize(new Dimension(25, 0));
+		button.addActionListener(l ->
+		{
+			var muxer = pluginList.getMuxer();
+			var highlightPanel = highlightPanelProvider.get();
+			highlightPanel.init(pluginConfig, cd, cid);
+			muxer.pushState(highlightPanel);
+		});
+		panel.add(button, BorderLayout.WEST);
+
+		JCheckBox checkbox = new JCheckBox();
+		{
+			ActorHighlight highlight = configManager.getConfiguration(cd.getGroup().value(), cid.getItem().keyName(), cid.getType());
+			checkbox.setSelected(highlight.isEnabled());
+		}
+		checkbox.addActionListener(ae ->
+		{
+			button.setVisible(checkbox.isSelected());
+
+			ActorHighlight highlight = configManager.getConfiguration(cd.getGroup().value(), cid.getItem().keyName(), ActorHighlight.class);
+			configManager.setConfiguration(cd.getGroup().value(), cid.getItem().keyName(), highlight.withEnabled(checkbox.isSelected()));
+		});
+		checkbox.setBackground(ColorScheme.LIGHT_GRAY_COLOR);
+		panel.add(checkbox, BorderLayout.EAST);
+
+		// button visibility is tied to the checkbox
+		button.setVisible(checkbox.isSelected());
+		return panel;
+	}
+
+	private JPanel createObjectHighlight(ConfigDescriptor cd, ConfigItemDescriptor cid)
+	{
+		JPanel panel = new JPanel();
+		panel.setLayout(new BorderLayout());
+
+		JButton button = new JButton(ConfigPanel.CONFIG_ICON);
+		SwingUtil.removeButtonDecorations(button);
+		button.setPreferredSize(new Dimension(25, 0));
+		button.addActionListener(l ->
+		{
+			var muxer = pluginList.getMuxer();
+			var highlightPanel = highlightPanelProvider.get();
+			highlightPanel.init(pluginConfig, cd, cid);
+			muxer.pushState(highlightPanel);
+		});
+		panel.add(button, BorderLayout.WEST);
+
+		JCheckBox checkbox = new JCheckBox();
+		{
+			ObjectHighlight highlight = configManager.getConfiguration(cd.getGroup().value(), cid.getItem().keyName(), cid.getType());
+			checkbox.setSelected(highlight.isEnabled());
+		}
+		checkbox.addActionListener(ae ->
+		{
+			button.setVisible(checkbox.isSelected());
+
+			ObjectHighlight highlight = configManager.getConfiguration(cd.getGroup().value(), cid.getItem().keyName(), ObjectHighlight.class);
+			configManager.setConfiguration(cd.getGroup().value(), cid.getItem().keyName(), highlight.withEnabled(checkbox.isSelected()));
+		});
+		checkbox.setBackground(ColorScheme.LIGHT_GRAY_COLOR);
+		panel.add(checkbox, BorderLayout.EAST);
+
+		// button visibility is tied to the checkbox
+		button.setVisible(checkbox.isSelected());
+		return panel;
+	}
+
+	private JPanel createTileHighlight(ConfigDescriptor cd, ConfigItemDescriptor cid)
+	{
+		JPanel panel = new JPanel();
+		panel.setLayout(new BorderLayout());
+
+		JButton button = new JButton(ConfigPanel.CONFIG_ICON);
+		SwingUtil.removeButtonDecorations(button);
+		button.setPreferredSize(new Dimension(25, 0));
+		button.addActionListener(l ->
+		{
+			var muxer = pluginList.getMuxer();
+			var highlightPanel = highlightPanelProvider.get();
+			highlightPanel.init(pluginConfig, cd, cid);
+			muxer.pushState(highlightPanel);
+		});
+		panel.add(button, BorderLayout.WEST);
+
+		JCheckBox checkbox = new JCheckBox();
+		{
+			TileHighlight highlight = configManager.getConfiguration(cd.getGroup().value(), cid.getItem().keyName(), cid.getType());
+			checkbox.setSelected(highlight.isEnabled());
+		}
+		checkbox.addActionListener(ae ->
+		{
+			button.setVisible(checkbox.isSelected());
+
+			TileHighlight highlight = configManager.getConfiguration(cd.getGroup().value(), cid.getItem().keyName(), TileHighlight.class);
+			configManager.setConfiguration(cd.getGroup().value(), cid.getItem().keyName(), highlight.withEnabled(checkbox.isSelected()));
+		});
+		checkbox.setBackground(ColorScheme.LIGHT_GRAY_COLOR);
+		panel.add(checkbox, BorderLayout.EAST);
+
+		// button visibility is tied to the checkbox
+		button.setVisible(checkbox.isSelected());
 		return panel;
 	}
 
