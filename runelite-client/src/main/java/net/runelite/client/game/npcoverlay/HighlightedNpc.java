@@ -35,8 +35,13 @@ import net.runelite.api.NPC;
 @Builder
 public class HighlightedNpc
 {
-	@NonNull
+	/**
+	 * @deprecated No longer used. Callers should remove its usage without replacement.
+	 */
+	@Deprecated
+	@SuppressWarnings("unused")
 	NPC npc;
+
 	@NonNull
 	Color highlightColor;
 	@Builder.Default

@@ -192,7 +192,6 @@ public class SlayerPlugin extends Plugin
 		{
 			Color color = config.getTargetColor();
 			return HighlightedNpc.builder()
-				.npc(n)
 				.highlightColor(color)
 				.fillColor(ColorUtil.colorWithAlpha(color, color.getAlpha() / 12))
 				.hull(config.highlightHull())

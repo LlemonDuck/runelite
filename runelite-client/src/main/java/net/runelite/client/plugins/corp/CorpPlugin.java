@@ -105,7 +105,6 @@ public class CorpPlugin extends Plugin
 		if (npc == core)
 		{
 			return HighlightedNpc.builder()
-				.npc(npc)
 				.tile(true)
 				.highlightColor(Color.RED.brighter())
 				.render(n -> config.markDarkCore())

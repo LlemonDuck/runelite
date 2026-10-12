@@ -186,7 +186,6 @@ public class RunecraftPlugin extends Plugin
 		if (npc.getId() == NpcID.RCU_ZAMMY_MAGE2)
 		{
 			return HighlightedNpc.builder()
-				.npc(npc)
 				.tile(true)
 				.highlightColor(Color.GREEN)
 				.render(n -> config.hightlightDarkMage() && degradedPouchInInventory)
