@@ -31,6 +31,7 @@ import java.awt.Dimension;
 import java.awt.Graphics2D;
 import java.awt.Polygon;
 import java.awt.Shape;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Predicate;
 import net.runelite.api.Client;
@@ -51,9 +52,9 @@ class NpcOverlay extends Overlay
 {
 	private final Client client;
 	private final ModelOutlineRenderer modelOutlineRenderer;
-	private final Map<NPC, HighlightedNpc> highlightedNpcs;
+	private final Map<NPC, List<HighlightedNpc>> highlightedNpcs;
 
-	NpcOverlay(Client client, ModelOutlineRenderer modelOutlineRenderer, Map<NPC, HighlightedNpc> highlightedNpcs)
+	NpcOverlay(Client client, ModelOutlineRenderer modelOutlineRenderer, Map<NPC, List<HighlightedNpc>> highlightedNpcs)
 	{
 		this.client = client;
 		this.modelOutlineRenderer = modelOutlineRenderer;
@@ -70,11 +71,26 @@ class NpcOverlay extends Overlay
 			return null;
 		}
 
-		for (Map.Entry<NPC, HighlightedNpc> entry : highlightedNpcs.entrySet())
+		for (Map.Entry<NPC, List<HighlightedNpc>> entry : highlightedNpcs.entrySet())
 		{
 			NPC actor = entry.getKey();
-			HighlightedNpc highlightedNpc = entry.getValue();
-			renderNpcOverlay(graphics, actor, highlightedNpc);
+			NPCComposition npcComposition = actor.getTransformedComposition();
+			if (npcComposition == null || !npcComposition.isInteractible())
+			{
+				continue;
+			}
+
+			List<HighlightedNpc> potentialHighlights = entry.getValue();
+			for (HighlightedNpc highlightedNpc : potentialHighlights)
+			{
+				Predicate<NPC> render = highlightedNpc.getRender();
+				if (render != null && !render.test(actor))
+				{
+					continue;
+				}
+
+				renderNpcOverlay(graphics, actor, highlightedNpc);
+			}
 		}
 
 		return null;
@@ -83,16 +99,6 @@ class NpcOverlay extends Overlay
 	private void renderNpcOverlay(Graphics2D graphics, NPC actor, HighlightedNpc highlightedNpc)
 	{
 		NPCComposition npcComposition = actor.getTransformedComposition();
-		if (npcComposition == null || !npcComposition.isInteractible())
-		{
-			return;
-		}
-
-		Predicate<NPC> render = highlightedNpc.getRender();
-		if (render != null && !render.test(actor))
-		{
-			return;
-		}
 
 		final Color borderColor = highlightedNpc.getHighlightColor();
 		float borderWidth = highlightedNpc.getBorderWidth();

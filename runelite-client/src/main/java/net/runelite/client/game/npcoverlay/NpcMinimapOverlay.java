@@ -28,6 +28,7 @@ package net.runelite.client.game.npcoverlay;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics2D;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Predicate;
 import net.runelite.api.NPC;
@@ -41,9 +42,9 @@ import net.runelite.client.util.Text;
 
 class NpcMinimapOverlay extends Overlay
 {
-	private final Map<NPC, HighlightedNpc> highlightedNpcs;
+	private final Map<NPC, List<HighlightedNpc>> highlightedNpcs;
 
-	NpcMinimapOverlay(Map<NPC, HighlightedNpc> highlightedNpcs)
+	NpcMinimapOverlay(Map<NPC, List<HighlightedNpc>> highlightedNpcs)
 	{
 		this.highlightedNpcs = highlightedNpcs;
 		setPosition(OverlayPosition.DYNAMIC);
@@ -53,11 +54,26 @@ class NpcMinimapOverlay extends Overlay
 	@Override
 	public Dimension render(Graphics2D graphics)
 	{
-		for (Map.Entry<NPC, HighlightedNpc> entry : highlightedNpcs.entrySet())
+		for (Map.Entry<NPC, List<HighlightedNpc>> entry : highlightedNpcs.entrySet())
 		{
 			NPC actor = entry.getKey();
-			HighlightedNpc highlightedNpc = entry.getValue();
-			renderNpcOverlay(graphics, actor, highlightedNpc);
+			NPCComposition npcComposition = actor.getTransformedComposition();
+			if (npcComposition == null || !npcComposition.isInteractible())
+			{
+				continue;
+			}
+
+			List<HighlightedNpc> potentialHighlights = entry.getValue();
+			for (HighlightedNpc highlightedNpc : potentialHighlights)
+			{
+				Predicate<NPC> render = highlightedNpc.getRender();
+				if (render != null && !render.test(actor))
+				{
+					continue;
+				}
+
+				renderNpcOverlay(graphics, actor, highlightedNpc);
+			}
 		}
 
 		return null;
@@ -65,29 +81,19 @@ class NpcMinimapOverlay extends Overlay
 
 	private void renderNpcOverlay(Graphics2D graphics, NPC actor, HighlightedNpc highlightedNpc)
 	{
-		NPCComposition npcComposition = actor.getTransformedComposition();
-		if (npcComposition == null || !npcComposition.isInteractible())
-		{
-			return;
-		}
-
-		Predicate<NPC> render = highlightedNpc.getRender();
-		if (render != null && !render.test(actor))
-		{
-			return;
-		}
-
 		Point minimapLocation = actor.getMinimapLocation();
-		if (minimapLocation != null)
+		if (minimapLocation == null)
 		{
-			Color color = highlightedNpc.getHighlightColor();
-			OverlayUtil.renderMinimapLocation(graphics, minimapLocation, color);
+			return;
+		}
 
-			if (highlightedNpc.isNameOnMinimap() && actor.getName() != null)
-			{
-				String name = Text.removeTags(actor.getName());
-				OverlayUtil.renderTextLocation(graphics, minimapLocation, name, color);
-			}
+		Color color = highlightedNpc.getHighlightColor();
+		OverlayUtil.renderMinimapLocation(graphics, minimapLocation, color);
+
+		if (highlightedNpc.isNameOnMinimap() && actor.getName() != null)
+		{
+			String name = Text.removeTags(actor.getName());
+			OverlayUtil.renderTextLocation(graphics, minimapLocation, name, color);
 		}
 	}
 }

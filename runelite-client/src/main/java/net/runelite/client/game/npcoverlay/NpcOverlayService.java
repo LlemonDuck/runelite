@@ -52,7 +52,7 @@ public class NpcOverlayService
 	private final Client client;
 	private final ClientThread clientThread;
 	private final List<Function<NPC, HighlightedNpc>> highlightFunctions = new ArrayList<>();
-	private final Map<NPC, HighlightedNpc> highlightedNpcs = new HashMap<>();
+	private final Map<NPC, List<HighlightedNpc>> highlightedNpcs = new HashMap<>();
 
 	@Inject
 	private NpcOverlayService(Client client, ClientThread clientThread,
@@ -82,16 +82,7 @@ public class NpcOverlayService
 	private void onNpcSpawned(NpcSpawned npcSpawned)
 	{
 		final NPC npc = npcSpawned.getNpc();
-
-		for (Function<NPC, HighlightedNpc> f : highlightFunctions)
-		{
-			HighlightedNpc highlightedNpc = f.apply(npc);
-			if (highlightedNpc != null)
-			{
-				highlightedNpcs.put(npc, highlightedNpc);
-				return;
-			}
-		}
+		registerNpc(npc);
 	}
 
 	@Subscribe(
@@ -111,16 +102,7 @@ public class NpcOverlayService
 		final NPC npc = event.getNpc();
 
 		highlightedNpcs.remove(npc);
-
-		for (Function<NPC, HighlightedNpc> f : highlightFunctions)
-		{
-			HighlightedNpc highlightedNpc = f.apply(npc);
-			if (highlightedNpc != null)
-			{
-				highlightedNpcs.put(npc, highlightedNpc);
-				return;
-			}
-		}
+		registerNpc(npc);
 	}
 
 	public void rebuild()
@@ -139,18 +121,9 @@ public class NpcOverlayService
 			return;
 		}
 
-		outer:
 		for (NPC npc : wv.npcs())
 		{
-			for (Function<NPC, HighlightedNpc> f : highlightFunctions)
-			{
-				HighlightedNpc highlightedNpc = f.apply(npc);
-				if (highlightedNpc != null)
-				{
-					highlightedNpcs.put(npc, highlightedNpc);
-					continue outer;
-				}
-			}
+			registerNpc(npc);
 		}
 
 		for (WorldView sub : wv.worldViews())
@@ -169,5 +142,18 @@ public class NpcOverlayService
 	{
 		highlightFunctions.remove(p);
 		rebuild();
+	}
+
+	private void registerNpc(final NPC npc)
+	{
+		for (Function<NPC, HighlightedNpc> f : highlightFunctions)
+		{
+			HighlightedNpc highlightedNpc = f.apply(npc);
+			if (highlightedNpc != null)
+			{
+				highlightedNpcs.computeIfAbsent(npc, _npc -> new ArrayList<>())
+					.add(highlightedNpc);
+			}
+		}
 	}
 }
