@@ -53,17 +53,18 @@ class NpcMinimapOverlay extends Overlay
 	@Override
 	public Dimension render(Graphics2D graphics)
 	{
-		for (HighlightedNpc highlightedNpc : highlightedNpcs.values())
+		for (Map.Entry<NPC, HighlightedNpc> entry : highlightedNpcs.entrySet())
 		{
-			renderNpcOverlay(graphics, highlightedNpc);
+			NPC actor = entry.getKey();
+			HighlightedNpc highlightedNpc = entry.getValue();
+			renderNpcOverlay(graphics, actor, highlightedNpc);
 		}
 
 		return null;
 	}
 
-	private void renderNpcOverlay(Graphics2D graphics, HighlightedNpc highlightedNpc)
+	private void renderNpcOverlay(Graphics2D graphics, NPC actor, HighlightedNpc highlightedNpc)
 	{
-		NPC actor = highlightedNpc.getNpc();
 		NPCComposition npcComposition = actor.getTransformedComposition();
 		if (npcComposition == null || !npcComposition.isInteractible())
 		{

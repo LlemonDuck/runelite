@@ -906,7 +906,6 @@ public class NpcIndicatorsPlugin extends Plugin
 		}
 
 		return HighlightedNpc.builder()
-			.npc(npc)
 			.highlightColor(MoreObjects.firstNonNull(getNpcHighlightColor(npcId), config.highlightColor()))
 			.fillColor(config.fillColor())
 			.hull(hull)

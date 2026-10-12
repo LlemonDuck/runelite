@@ -70,7 +70,6 @@ public class ImplingsPlugin extends Plugin
 		{
 			Color color = implingColor(impling);
 			return HighlightedNpc.builder()
-				.npc(npc)
 				.highlightColor(color)
 				.tile(true)
 				.name(true)
