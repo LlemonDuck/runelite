@@ -27,6 +27,7 @@ package net.runelite.client.party;
 import com.google.gson.Gson;
 import com.google.gson.JsonParseException;
 import com.google.protobuf.InvalidProtocolBufferException;
+import java.io.IOException;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Objects;
@@ -34,6 +35,7 @@ import java.util.UUID;
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
+import lombok.Data;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.client.RuneLite;
@@ -42,6 +44,8 @@ import net.runelite.client.party.events.UserJoin;
 import net.runelite.client.party.events.UserPart;
 import net.runelite.client.party.messages.PartyMemberMessage;
 import net.runelite.client.party.messages.WebsocketMessage;
+import okhttp3.Call;
+import okhttp3.Callback;
 import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -54,6 +58,13 @@ import okio.ByteString;
 @Singleton
 public class WSClient extends WebSocketListener implements AutoCloseable
 {
+
+	@Data
+	private static class GetShardResponse
+	{
+		String endpoint;
+	}
+
 	private final EventBus eventBus;
 	private final OkHttpClient okHttpClient;
 	private final HttpUrl runeliteWs;
@@ -106,6 +117,7 @@ public class WSClient extends WebSocketListener implements AutoCloseable
 			throw new IllegalStateException("Cannot connect with no session id");
 		}
 
+		UUID sessionId = this.sessionId;
 		Request request = new Request.Builder()
 			.url(runeliteWs.newBuilder()
 				.addQueryParameter("sessionId", sessionId.toString())
@@ -113,7 +125,36 @@ public class WSClient extends WebSocketListener implements AutoCloseable
 			.header("User-Agent", RuneLite.USER_AGENT)
 			.build();
 
-		webSocket = okHttpClient.newWebSocket(request, this);
+		okHttpClient.newCall(request).enqueue(new Callback()
+		{
+			@Override
+			public void onFailure(Call call, IOException e)
+			{
+				log.warn("Failed to get endpoint from ws load balancer", e);
+			}
+
+			@Override
+			public void onResponse(Call call, Response response)
+			{
+				if (!Objects.equals(sessionId, WSClient.this.sessionId))
+				{
+					log.debug("sessionId changed during load balancer request, dropping response");
+					return;
+				}
+
+				var shard = gson.fromJson(response.body().charStream(), GetShardResponse.class);
+				webSocket = okHttpClient.newWebSocket(
+					new Request.Builder()
+						.url(HttpUrl.parse(shard.getEndpoint())
+							.newBuilder()
+							.addQueryParameter("sessionId", sessionId.toString())
+							.build())
+						.header("User-Agent", RuneLite.USER_AGENT)
+						.build(),
+					WSClient.this
+				);
+			}
+		});
 	}
 
 	boolean isOpen()
