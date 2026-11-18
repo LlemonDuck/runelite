@@ -28,20 +28,32 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import com.google.inject.Inject;
 import java.awt.BorderLayout;
+import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.event.AdjustmentEvent;
 import java.awt.event.AdjustmentListener;
+import java.util.EnumMap;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 import javax.swing.BorderFactory;
+import javax.swing.DefaultListCellRenderer;
+import javax.swing.DefaultListModel;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JLabel;
+import javax.swing.JList;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollBar;
 import javax.swing.JScrollPane;
+import javax.swing.JTabbedPane;
+import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 import javax.swing.border.CompoundBorder;
 import lombok.Getter;
@@ -55,43 +67,79 @@ import net.runelite.api.gameval.VarClientID;
 import net.runelite.api.gameval.VarPlayerID;
 import net.runelite.api.gameval.VarbitID;
 import net.runelite.client.callback.ClientThread;
+import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.EventBus;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.DynamicGridLayout;
 import net.runelite.client.ui.FontManager;
+import net.runelite.client.util.Text;
 
 class VarInspector extends DevToolsFrame
 {
 	@Getter
-	private enum VarType
+	private enum VarFilter
 	{
-		VARBIT("Varbit"),
-		VARP("VarPlayer"),
-		VARCINT("VarClientInt"),
-		VARCSTR("VarClientStr");
+		VARBIT("Varbit", "varbBlacklist",
+			VarbitID.CLOCK, VarbitID.DATE_MILLISECONDS_PAST_MINUTE, VarbitID.DATE_SECONDS_PAST_MINUTE),
+		VARP("VarPlayer", "varpBlacklist",
+			VarPlayerID.DATE_MINUTES, VarPlayerID.MAP_CLOCK),
+		VARC("VarClient", "varcBlacklist",
+			VarClientID.CAMERA_ZOOM_BIG, VarClientID.CAMERA_ZOOM_SMALL);
 
 		private final String name;
-		private final JCheckBox checkBox;
+		private final String configKey;
+		private final int[] defaultBlacklist;
 
-		VarType(String name)
+		VarFilter(String name, String configKey, int... defaultBlacklist)
 		{
 			this.name = name;
+			this.configKey = configKey;
+			this.defaultBlacklist = defaultBlacklist;
+		}
+	}
+
+	@Getter
+	private enum VarType
+	{
+		VARBIT("Varbit", VarFilter.VARBIT),
+		VARP("VarPlayer", VarFilter.VARP),
+		VARCINT("VarClientInt", VarFilter.VARC),
+		VARCSTR("VarClientStr", VarFilter.VARC);
+
+		private final String name;
+		private final VarFilter filter;
+		private final JCheckBox checkBox;
+
+		VarType(String name, VarFilter filter)
+		{
+			this.name = name;
+			this.filter = filter;
 			checkBox = new JCheckBox(name, true);
 		}
 	}
+
+	private static final String CONFIG_GROUP = "devtools";
 
 	private final static int MAX_LOG_ENTRIES = 10_000;
 	private static final int VARBITS_ARCHIVE_ID = 14;
 	private static final Map<Integer, String> VARBIT_NAMES = DevToolsPlugin.loadFieldNames(VarbitID.class);
 	private static final Map<Integer, String> VARC_NAMES = DevToolsPlugin.loadFieldNames(VarClientID.class);
 	private static final Map<Integer, String> VARP_NAMES = DevToolsPlugin.loadFieldNames(VarPlayerID.class);
+	private static final Map<String, Integer> VARBIT_IDS = invertNames(VARBIT_NAMES);
+	private static final Map<String, Integer> VARC_IDS = invertNames(VARC_NAMES);
+	private static final Map<String, Integer> VARP_IDS = invertNames(VARP_NAMES);
 
 	private final Client client;
 	private final ClientThread clientThread;
 	private final EventBus eventBus;
+	private final ConfigManager configManager;
 
 	private final JPanel tracker = new JPanel();
+	private final JTabbedPane blacklistTabs = new JTabbedPane();
+	private final Map<VarFilter, Set<Integer>> blacklists = new EnumMap<>(VarFilter.class);
+	private final Map<VarFilter, JList<Integer>> blacklistLists = new EnumMap<>(VarFilter.class);
+	private final Map<VarFilter, DefaultListModel<Integer>> blacklistModels = new EnumMap<>(VarFilter.class);
 
 	private int lastTick = 0;
 
@@ -102,17 +150,21 @@ class VarInspector extends DevToolsFrame
 	private Map<Integer, Object> varcs = null;
 
 	@Inject
-	VarInspector(Client client, ClientThread clientThread, EventBus eventBus)
+	VarInspector(Client client, ClientThread clientThread, EventBus eventBus, ConfigManager configManager)
 	{
 		this.client = client;
 		this.clientThread = clientThread;
 		this.eventBus = eventBus;
+		this.configManager = configManager;
 
 		setTitle("RuneLite Var Inspector");
 
 		setLayout(new BorderLayout());
 
 		tracker.setLayout(new DynamicGridLayout(0, 1, 0, 3));
+
+		final JPanel varEventsPanel = new JPanel();
+		varEventsPanel.setLayout(new BorderLayout());
 
 		final JPanel trackerWrapper = new JPanel();
 		trackerWrapper.setLayout(new BorderLayout());
@@ -142,7 +194,7 @@ class VarInspector extends DevToolsFrame
 			}
 		});
 
-		add(trackerScroller, BorderLayout.CENTER);
+		varEventsPanel.add(trackerScroller, BorderLayout.CENTER);
 
 		final JPanel trackerOpts = new JPanel();
 		trackerOpts.setLayout(new FlowLayout());
@@ -159,19 +211,215 @@ class VarInspector extends DevToolsFrame
 		});
 		trackerOpts.add(clearBtn);
 
-		add(trackerOpts, BorderLayout.SOUTH);
+		varEventsPanel.add(trackerOpts, BorderLayout.SOUTH);
+		add(varEventsPanel, BorderLayout.CENTER);
+
+		final JPanel blacklistsPanel = new JPanel();
+		blacklistsPanel.setLayout(new BorderLayout());
+
+		for (VarFilter filter : VarFilter.values())
+		{
+			blacklists.put(filter, loadBlacklist(filter));
+
+			final DefaultListModel<Integer> model = new DefaultListModel<>();
+			final JList<Integer> jList = new JList<>(model);
+			jList.setCellRenderer(new DefaultListCellRenderer()
+			{
+				@Override
+				public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus)
+				{
+					return super.getListCellRendererComponent(list, formatVar(filter, (Integer) value), index, isSelected, cellHasFocus);
+				}
+			});
+			blacklistModels.put(filter, model);
+			blacklistLists.put(filter, jList);
+			refreshList(filter);
+
+			final JScrollPane listScrollPane = new JScrollPane(jList);
+			listScrollPane.setPreferredSize(new Dimension(250, 400));
+			blacklistTabs.addTab(filter.getName(), listScrollPane);
+		}
+
+		blacklistsPanel.add(blacklistTabs, BorderLayout.CENTER);
+
+		final JTextField varInput = new JTextField(12);
+		varInput.addActionListener(e -> addToBlacklist(varInput));
+
+		final JButton addButton = new JButton("Add");
+		addButton.addActionListener(e -> addToBlacklist(varInput));
+
+		final JButton removeButton = new JButton("Remove");
+		removeButton.addActionListener(e -> removeSelectedFromBlacklist());
+
+		final JPanel bottomButtonRow = new JPanel();
+		bottomButtonRow.setLayout(new FlowLayout());
+		bottomButtonRow.add(addButton);
+		bottomButtonRow.add(varInput);
+		bottomButtonRow.add(removeButton);
+
+		blacklistsPanel.add(bottomButtonRow, BorderLayout.SOUTH);
+
+		add(blacklistsPanel, BorderLayout.EAST);
 
 		pack();
 	}
 
-	private void addVarLog(VarType type, String name, int old, int neew)
+	private static Map<String, Integer> invertNames(Map<Integer, String> names)
 	{
-		addVarLog(type, name, Integer.toString(old), Integer.toString(neew));
+		return names.entrySet()
+			.stream()
+			.collect(Collectors.toMap(
+				e -> e.getValue().toUpperCase(Locale.ROOT),
+				Map.Entry::getKey,
+				(a, b) -> a
+			));
 	}
 
-	private void addVarLog(VarType type, String name, String old, String neew)
+	private static Map<Integer, String> getNames(VarFilter filter)
 	{
-		if (!type.getCheckBox().isSelected())
+		switch (filter)
+		{
+			case VARBIT:
+				return VARBIT_NAMES;
+			case VARP:
+				return VARP_NAMES;
+			default:
+				return VARC_NAMES;
+		}
+	}
+
+	private static Map<String, Integer> getIds(VarFilter filter)
+	{
+		switch (filter)
+		{
+			case VARBIT:
+				return VARBIT_IDS;
+			case VARP:
+				return VARP_IDS;
+			default:
+				return VARC_IDS;
+		}
+	}
+
+	private static String formatVar(VarFilter filter, int id)
+	{
+		final String name = getNames(filter).get(id);
+		if (name == null)
+		{
+			return Integer.toString(id);
+		}
+
+		return name + " (" + id + ")";
+	}
+
+	private Set<Integer> loadBlacklist(VarFilter filter)
+	{
+		final Set<Integer> set = ConcurrentHashMap.newKeySet();
+		final String config = configManager.getConfiguration(CONFIG_GROUP, filter.getConfigKey());
+		if (config != null)
+		{
+			try
+			{
+				for (String id : Text.fromCSV(config))
+				{
+					set.add(Integer.parseInt(id));
+				}
+				return set;
+			}
+			catch (NumberFormatException e)
+			{
+				set.clear();
+			}
+		}
+
+		for (int id : filter.getDefaultBlacklist())
+		{
+			set.add(id);
+		}
+		return set;
+	}
+
+	private void saveBlacklists()
+	{
+		for (VarFilter filter : VarFilter.values())
+		{
+			configManager.setConfiguration(
+				CONFIG_GROUP,
+				filter.getConfigKey(),
+				Text.toCSV(blacklists.get(filter)
+					.stream()
+					.sorted()
+					.map(String::valueOf)
+					.collect(Collectors.toList()))
+			);
+		}
+	}
+
+	private VarFilter getSelectedFilter()
+	{
+		return VarFilter.values()[blacklistTabs.getSelectedIndex()];
+	}
+
+	private void addToBlacklist(JTextField field)
+	{
+		final String input = field.getText().trim();
+		if (input.isEmpty())
+		{
+			return;
+		}
+
+		final VarFilter filter = getSelectedFilter();
+		Integer id;
+		try
+		{
+			id = Integer.parseInt(input);
+		}
+		catch (NumberFormatException e)
+		{
+			id = getIds(filter).get(input.toUpperCase(Locale.ROOT));
+		}
+
+		if (id == null)
+		{
+			JOptionPane.showMessageDialog(
+				this,
+				"Unknown " + filter.getName() + ": " + input,
+				"Var Inspector",
+				JOptionPane.WARNING_MESSAGE
+			);
+			return;
+		}
+
+		blacklists.get(filter).add(id);
+		refreshList(filter);
+		field.setText("");
+	}
+
+	private void removeSelectedFromBlacklist()
+	{
+		final VarFilter filter = getSelectedFilter();
+		blacklists.get(filter).removeAll(blacklistLists.get(filter).getSelectedValuesList());
+		refreshList(filter);
+	}
+
+	private void refreshList(VarFilter filter)
+	{
+		final DefaultListModel<Integer> model = blacklistModels.get(filter);
+		model.clear();
+		blacklists.get(filter)
+			.stream()
+			.sorted()
+			.forEach(model::addElement);
+	}
+
+	private void addVarLog(VarType type, int id, String name, int old, int neew)
+	{
+		addVarLog(type, id, name, Integer.toString(old), Integer.toString(neew));
+	}
+
+	private void addVarLog(VarType type, int id, String name, String old, String neew)
+	{
+		if (!type.getCheckBox().isSelected() || blacklists.get(type.getFilter()).contains(id))
 		{
 			return;
 		}
@@ -221,7 +469,7 @@ class VarInspector extends DevToolsFrame
 				client.setVarbitValue(oldVarps2, i, neew);
 
 				final String name = VARBIT_NAMES.getOrDefault(i, Integer.toString(i));
-				addVarLog(VarType.VARBIT, name, old, neew);
+				addVarLog(VarType.VARBIT, i, name, old, neew);
 			}
 		}
 
@@ -239,7 +487,7 @@ class VarInspector extends DevToolsFrame
 			{
 				name = Integer.toString(index);
 			}
-			addVarLog(VarType.VARP, name, old, neew);
+			addVarLog(VarType.VARP, index, name, old, neew);
 		}
 
 		System.arraycopy(client.getVarps(), 0, oldVarps, 0, oldVarps.length);
@@ -257,7 +505,7 @@ class VarInspector extends DevToolsFrame
 		if (old != neew)
 		{
 			final String name = VARC_NAMES.getOrDefault(idx, Integer.toString(idx));
-			addVarLog(VarType.VARCINT, name, old, neew);
+			addVarLog(VarType.VARCINT, idx, name, old, neew);
 		}
 	}
 
@@ -288,7 +536,7 @@ class VarInspector extends DevToolsFrame
 			{
 				neew = "null";
 			}
-			addVarLog(VarType.VARCSTR, name, old, neew);
+			addVarLog(VarType.VARCSTR, idx, name, old, neew);
 		}
 	}
 
@@ -328,6 +576,7 @@ class VarInspector extends DevToolsFrame
 	@Override
 	public void close()
 	{
+		saveBlacklists();
 		super.close();
 		tracker.removeAll();
 		eventBus.unregister(this);
